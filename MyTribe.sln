@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36017.23 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyTribe", "MyTribe\MyTribe\MyTribe.csproj", "{8F019C4F-D175-4637-BECB-05409A8C0CA9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MyTribe.Client", "MyTribe\MyTribe.Client\MyTribe.Client.csproj", "{44685642-87B1-41F1-ACA0-E5B9F6B2B9A7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8F019C4F-D175-4637-BECB-05409A8C0CA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F019C4F-D175-4637-BECB-05409A8C0CA9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F019C4F-D175-4637-BECB-05409A8C0CA9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F019C4F-D175-4637-BECB-05409A8C0CA9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{44685642-87B1-41F1-ACA0-E5B9F6B2B9A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{44685642-87B1-41F1-ACA0-E5B9F6B2B9A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{44685642-87B1-41F1-ACA0-E5B9F6B2B9A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{44685642-87B1-41F1-ACA0-E5B9F6B2B9A7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {BC9A760F-C053-4A0C-ABF6-9E4919249EFD}
+	EndGlobalSection
+EndGlobal
