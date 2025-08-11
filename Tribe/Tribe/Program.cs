@@ -9,14 +9,25 @@ using MudBlazor.Services;
 using System.Text;
 using Tribe.Bib.Models.TribeRelated;
 using Tribe.Client.Pages;
+using Tribe.Client.Services;
 using Tribe.Components;
 using Tribe.Components.Account;
 using Tribe.Data;
 using Tribe.Services;
+using Tribe.Services.ClientServices;
 using Tribe.Services.Hubs;
 using Tribe.Services.ServerServices;
 
 var builder = WebApplication.CreateBuilder(args);
+
+#region ClientNonsense
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IApiService, ApiService>();
+
+builder.Services.AddScoped<ISignalRService, SignalRService>();
+builder.Services.AddScoped<ITokenInitializationService, TokenInitializationService>();
+builder.Services.AddHttpClient();
+#endregion
 
 // Add MudBlazor services
 builder.Services.AddMudServices();

@@ -40,7 +40,7 @@ namespace Tribe.Services.ClientServices
                 if (!string.IsNullOrEmpty(token))
                 {
                     // Store token in localStorage for client use
-                    _authService.StoreToken(token);
+                    await _authService.StoreTokenAsync(token);
                     _apiService.SetAuthToken(token);
                 }
             }

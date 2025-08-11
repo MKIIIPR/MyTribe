@@ -16,6 +16,7 @@ public class TestController : ControllerBase
     }
 
     [HttpGet("protected")]
+    [Authorize]
     public IActionResult GetProtectedData()
     {
         var userName = User.Identity?.Name ?? "Unknown";

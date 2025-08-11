@@ -1,5 +1,6 @@
 ﻿
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.JSInterop;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -7,12 +8,12 @@ namespace Tribe.Client.Services;
 
 public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 {
-    private readonly IAuthService _authService;
+    private readonly IJSRuntime _jsRuntime;
     private readonly ISignalRService _signalRService;
 
-    public CustomAuthenticationStateProvider(IAuthService authService, ISignalRService signalRService)
+    public CustomAuthenticationStateProvider(IJSRuntime jsRuntime, ISignalRService signalRService)
     {
-        _authService = authService;
+        _jsRuntime = jsRuntime;
         _signalRService = signalRService;
 
         // Subscribe to SignalR events
@@ -22,18 +23,35 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        var token = _authService.GetStoredToken();
-
-        if (string.IsNullOrEmpty(token) || _authService.IsTokenExpired(token))
+        try
         {
+            // Try to get token from localStorage first
+            var token = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "authToken");
+
+            // If not found, try cookie
+            if (string.IsNullOrEmpty(token))
+            {
+                token = await GetTokenFromCookie();
+            }
+
+            if (string.IsNullOrEmpty(token) || IsTokenExpired(token))
+            {
+                Console.WriteLine("No valid token found - user not authenticated");
+                return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            }
+
+            var claims = ParseClaimsFromJwt(token);
+            var identity = new ClaimsIdentity(claims, "jwt");
+            var user = new ClaimsPrincipal(identity);
+
+            Console.WriteLine($"User authenticated: {user.Identity?.Name}");
+            return new AuthenticationState(user);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in GetAuthenticationStateAsync: {ex.Message}");
             return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
         }
-
-        var claims = ParseClaimsFromJwt(token);
-        var identity = new ClaimsIdentity(claims, "jwt");
-        var user = new ClaimsPrincipal(identity);
-
-        return new AuthenticationState(user);
     }
 
     public void NotifyUserAuthentication(string token)
@@ -42,26 +60,57 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
         var identity = new ClaimsIdentity(claims, "jwt");
         var user = new ClaimsPrincipal(identity);
 
+        Console.WriteLine($"Notifying user authentication: {user.Identity?.Name}");
         NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(user)));
     }
 
     public void NotifyUserLogout()
     {
+        Console.WriteLine("Notifying user logout");
         var anonymousUser = new ClaimsPrincipal(new ClaimsIdentity());
         NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(anonymousUser)));
     }
 
+    private async Task<string?> GetTokenFromCookie()
+    {
+        try
+        {
+            return await _jsRuntime.InvokeAsync<string>("eval",
+                "document.cookie.split('; ').find(row => row.startsWith('jwt_token='))?.split('=')[1]");
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private void OnUserLoggedIn(string userId, string userName)
     {
+        Console.WriteLine($"SignalR Event: User {userName} logged in");
         // Refresh auth state when receiving SignalR notification
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
 
     private void OnUserLoggedOut(string userId, string userName)
     {
-        // Clear auth state when receiving SignalR logout notification
-        _authService.RemoveToken();
+        Console.WriteLine($"SignalR Event: User {userName} logged out");
+        // Clear tokens and auth state
+        _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
         NotifyUserLogout();
+    }
+
+    private static bool IsTokenExpired(string token)
+    {
+        try
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var jsonToken = handler.ReadJwtToken(token);
+            return jsonToken.ValidTo < DateTime.UtcNow.AddMinutes(-1); // 1 minute buffer
+        }
+        catch
+        {
+            return true;
+        }
     }
 
     private static IEnumerable<Claim> ParseClaimsFromJwt(string jwt)

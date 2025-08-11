@@ -53,5 +53,6 @@ namespace Tribe.Bib.CommunicationModels
         public DateTime Timestamp { get; set; }
         public string? UserId { get; set; }
     }
+
 }
 }

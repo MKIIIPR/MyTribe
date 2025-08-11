@@ -13,7 +13,7 @@ public interface ISignalRService
 public class SignalRService : ISignalRService, IAsyncDisposable
 {
     private HubConnection? _hubConnection;
-    private readonly string _hubUrl;
+    private readonly string _baseUrl;
 
     public event Action<string, string>? UserLoggedIn;
     public event Action<string, string>? UserLoggedOut;
@@ -22,7 +22,8 @@ public class SignalRService : ISignalRService, IAsyncDisposable
 
     public SignalRService()
     {
-        _hubUrl = "/authHub";
+        // FIXED: Verwende absolute URL für WebSocket
+        _baseUrl = "https://localhost:7241"; // Ersetze mit deiner tatsächlichen URL
     }
 
     public async Task StartAsync()
@@ -33,27 +34,30 @@ public class SignalRService : ISignalRService, IAsyncDisposable
         }
 
         _hubConnection = new HubConnectionBuilder()
-            .WithUrl(_hubUrl)
-            .WithAutomaticReconnect()
+            .WithUrl($"{_baseUrl}/authHub") // ABSOLUTE URL
+            .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(10) })
             .Build();
 
         _hubConnection.On<string, string>("UserLoggedIn", (userId, userName) =>
         {
+            Console.WriteLine($"SignalR: UserLoggedIn - {userName}");
             UserLoggedIn?.Invoke(userId, userName);
         });
 
         _hubConnection.On<string, string>("UserLoggedOut", (userId, userName) =>
         {
+            Console.WriteLine($"SignalR: UserLoggedOut - {userName}");
             UserLoggedOut?.Invoke(userId, userName);
         });
 
         try
         {
             await _hubConnection.StartAsync();
+            Console.WriteLine("SignalR Connected Successfully");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // Log error if needed
+            Console.WriteLine($"SignalR Connection Failed: {ex.Message}");
         }
     }
 

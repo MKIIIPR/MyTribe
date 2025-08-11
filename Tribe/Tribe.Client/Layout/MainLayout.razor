@@ -1,24 +1,57 @@
-﻿@inherits LayoutComponentBase
+﻿
+@inherits LayoutComponentBase
+@using Tribe.Client.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject ISignalRService SignalRService
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
 
-<MudThemeProvider />
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
-<MudLayout>
-    <MudAppBar Elevation="1">
-        <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" />
-        <MudText Typo="Typo.h5" Class="ml-3">Application</MudText>
-        <MudSpacer />
-        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
-    </MudAppBar>
-    <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-       <Nav2/>
-    </MudDrawer>
-    <MudMainContent Class="pt-16 pa-4">
-        @Body
-    </MudMainContent>
-</MudLayout>
-
+<CascadingAuthenticationState>
+    <MudThemeProvider />
+    <MudPopoverProvider />
+    <MudDialogProvider />
+    <MudSnackbarProvider />
+    <MudLayout>
+        <MudAppBar Elevation="1">
+            <MudStaticNavDrawerToggle DrawerId="nav-drawer" Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" />
+            <MudText Typo="Typo.h5" Class="ml-3">Tribe Application</MudText>
+            <MudSpacer />
+            
+            <!-- Debug Info -->
+            <MudText Typo="Typo.caption" Class="mr-2">@debugInfo</MudText>
+            
+            <!-- SignalR Connection Status -->
+            <MudTooltip Text="@(SignalRService.IsConnected ? "SignalR Connected" : "SignalR Disconnected")">
+                <MudIcon Icon="@Icons.Material.Filled.Circle" 
+                         Color="@(SignalRService.IsConnected ? Color.Success : Color.Error)" 
+                         Size="Size.Small" 
+                         Class="mr-2" />
+            </MudTooltip>
+            
+            <!-- Auth Status Display -->
+            <AuthorizeView>
+                <Authorized>
+                    <MudTooltip Text="@($"Authenticated as {context.User.Identity?.Name}")">
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Success" Size="Size.Small" Class="mr-2" />
+                    </MudTooltip>
+                </Authorized>
+                <NotAuthorized>
+                    <MudTooltip Text="Not Authenticated">
+                        <MudIcon Icon="@Icons.Material.Filled.LockOpen" Color="Color.Warning" Size="Size.Small" Class="mr-2" />
+                    </MudTooltip>
+                </NotAuthorized>
+            </AuthorizeView>
+            
+            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
+        </MudAppBar>
+        <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+            <Nav2 />
+        </MudDrawer>
+        <MudMainContent Class="pt-16 pa-4">
+            @Body
+        </MudMainContent>
+    </MudLayout>
+</CascadingAuthenticationState>
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
@@ -28,6 +61,64 @@
 
 @code {
     private bool _drawerOpen = true;
+    private string debugInfo = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize SignalR connection
+        try
+        {
+            await SignalRService.StartAsync();
+            debugInfo = "SignalR OK";
+        }
+        catch (Exception ex)
+        {
+            debugInfo = $"SignalR Error: {ex.Message}";
+            Console.WriteLine($"SignalR Error: {ex.Message}");
+        }
+
+        // Check for existing tokens and sync
+        await CheckAndSyncTokens();
+        
+        // Refresh every 30 seconds for debugging
+        var timer = new System.Timers.Timer(30000);
+        timer.Elapsed += async (s, e) => await InvokeAsync(CheckAndSyncTokens);
+        timer.Start();
+    }
+
+    private async Task CheckAndSyncTokens()
+    {
+        try
+        {
+            var localToken = await JS.InvokeAsync<string>("localStorage.getItem", "authToken");
+            var cookieToken = await JS.InvokeAsync<string>("eval", 
+                "document.cookie.split('; ').find(row => row.startsWith('jwt_token='))?.split('=')[1]");
+
+            if (!string.IsNullOrEmpty(cookieToken) && string.IsNullOrEmpty(localToken))
+            {
+                // Sync cookie token to localStorage
+                await JS.InvokeVoidAsync("localStorage.setItem", "authToken", cookieToken);
+                
+                if (AuthStateProvider is CustomAuthenticationStateProvider customProvider)
+                {
+                    customProvider.NotifyUserAuthentication(cookieToken);
+                }
+                
+                debugInfo = "Token synced";
+                StateHasChanged();
+            }
+            else if (!string.IsNullOrEmpty(localToken))
+            {
+                debugInfo = $"Token OK ({localToken.Substring(0, 10)}...)";
+            }
+            else
+            {
+                debugInfo = "No token";
+            }
+        }
+        catch (Exception ex)
+        {
+            debugInfo = $"Sync Error: {ex.Message}";
+        }
+    }
 }
-
-

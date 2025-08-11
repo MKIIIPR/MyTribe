@@ -12,12 +12,12 @@
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-16">
     <MudText Typo="Typo.h3" GutterBottom="true">API Test Page</MudText>
-    
+
     <!-- SignalR Status -->
     <MudCard Class="mb-4">
         <MudCardContent>
             <MudText Typo="Typo.h6">SignalR Connection Status</MudText>
-            <MudText Color="@(SignalRService.IsConnected ? Color.Success : Color.Error)">
+            <MudText Color="@(SignalRService.IsConnected? Color.Success: Color.Error)">
                 @(SignalRService.IsConnected ? "Connected" : "Disconnected")
             </MudText>
             <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="ConnectSignalR" Disabled="SignalRService.IsConnected">
@@ -33,15 +33,15 @@
     <MudCard Class="mb-4">
         <MudCardContent>
             <MudText Typo="Typo.h6" Class="mb-4">API Tests</MudText>
-            
+
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="TestPublicEndpoint" Class="ma-2">
                 Test Public Endpoint
             </MudButton>
-            
+
             <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="TestProtectedEndpoint" Class="ma-2">
                 Test Protected Endpoint
             </MudButton>
-            
+
             <MudButton Variant="Variant.Filled" Color="Color.Tertiary" OnClick="GetCurrentUser" Class="ma-2">
                 Get Current User
             </MudButton>
@@ -62,7 +62,7 @@
     <MudCard>
         <MudCardContent>
             <MudText Typo="Typo.h6">Results</MudText>
-            
+
             @if (isLoading)
             {
                 <MudProgressCircular Indeterminate="true" />
@@ -79,10 +79,9 @@
             {
                 <MudText Typo="Typo.h6" Class="mt-4">SignalR Events</MudText>
                 <MudList T="string">
-
                     @foreach (var eventMsg in signalREvents.TakeLast(5))
                     {
-                        <MudListItem  Text="@eventMsg" />
+                        <MudListItem Text="@eventMsg" />
                     }
                 </MudList>
             }
@@ -161,10 +160,16 @@
         try
         {
             // Set token before making request
-            var token = AuthService.GetStoredToken();
+            var token = await AuthService.GetStoredTokenAsync();
             if (!string.IsNullOrEmpty(token))
             {
                 ApiService.SetAuthToken(token);
+            }
+            else
+            {
+                lastResult = "No authentication token found";
+                lastSeverity = Severity.Error;
+                return;
             }
 
             var result = await ApiService.GetAsync<object>("api/test/protected");
@@ -195,6 +200,22 @@
         isLoading = true;
         try
         {
+            // Debug: Token prüfen
+            var token = await AuthService.GetStoredTokenAsync();
+            if (string.IsNullOrEmpty(token))
+            {
+                lastResult = "No authentication token found";
+                lastSeverity = Severity.Error;
+                return;
+            }
+
+            if (AuthService.IsTokenExpired(token))
+            {
+                lastResult = "Authentication token has expired";
+                lastSeverity = Severity.Warning;
+                return;
+            }
+
             var user = await AuthService.GetCurrentUserAsync();
             if (user != null)
             {
@@ -203,7 +224,7 @@
             }
             else
             {
-                lastResult = "No user data received - check authentication";
+                lastResult = $"No user data received - Token exists but API returned null. Token: {token[..Math.Min(50, token.Length)]}...";
                 lastSeverity = Severity.Warning;
             }
         }
@@ -228,7 +249,7 @@
             {
                 lastResult = "Client logout successful";
                 lastSeverity = Severity.Success;
-                
+
                 // Notify the authentication state provider
                 if (AuthStateProvider is CustomAuthenticationStateProvider customProvider)
                 {

@@ -1,5 +1,6 @@
 ﻿using Microsoft.JSInterop;
 using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Http;
 using static Tribe.Bib.CommunicationModels.ComModels;
 
 namespace Tribe.Client.Services
@@ -9,9 +10,9 @@ namespace Tribe.Client.Services
         Task<LoginResponse?> LoginAsync(string email, string password);
         Task<bool> LogoutAsync();
         Task<UserInfo?> GetCurrentUserAsync();
-        string? GetStoredToken();
-        void StoreToken(string token);
-        void RemoveToken();
+        Task<string?> GetStoredTokenAsync();
+        Task StoreTokenAsync(string token);
+        Task RemoveTokenAsync();
         bool IsTokenExpired(string token);
     }
 
@@ -19,12 +20,15 @@ namespace Tribe.Client.Services
     {
         private readonly IApiService _apiService;
         private readonly IJSRuntime _jsRuntime;
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private const string TOKEN_KEY = "authToken";
+        private const string COOKIE_KEY = "jwt_token";
 
-        public AuthService(IApiService apiService, IJSRuntime jsRuntime)
+        public AuthService(IApiService apiService, IJSRuntime jsRuntime, IHttpContextAccessor httpContextAccessor)
         {
             _apiService = apiService;
             _jsRuntime = jsRuntime;
+            _httpContextAccessor = httpContextAccessor;
         }
 
         public async Task<LoginResponse?> LoginAsync(string email, string password)
@@ -34,7 +38,7 @@ namespace Tribe.Client.Services
 
             if (response != null)
             {
-                StoreToken(response.Token);
+                await StoreTokenAsync(response.Token);
                 _apiService.SetAuthToken(response.Token);
             }
 
@@ -45,20 +49,20 @@ namespace Tribe.Client.Services
         {
             try
             {
-                var token = GetStoredToken();
+                var token = await GetStoredTokenAsync();
                 if (!string.IsNullOrEmpty(token))
                 {
                     _apiService.SetAuthToken(token);
                     await _apiService.PostAsync<object, object>("api/auth/logout", new { });
                 }
 
-                RemoveToken();
+                await RemoveTokenAsync();
                 _apiService.RemoveAuthToken();
                 return true;
             }
             catch
             {
-                RemoveToken();
+                await RemoveTokenAsync();
                 _apiService.RemoveAuthToken();
                 return false;
             }
@@ -66,7 +70,7 @@ namespace Tribe.Client.Services
 
         public async Task<UserInfo?> GetCurrentUserAsync()
         {
-            var token = GetStoredToken();
+            var token = await GetStoredTokenAsync();
             if (string.IsNullOrEmpty(token) || IsTokenExpired(token))
             {
                 return null;
@@ -76,26 +80,94 @@ namespace Tribe.Client.Services
             return await _apiService.GetAsync<UserInfo>("api/auth/user");
         }
 
-        public string? GetStoredToken()
+        public async Task<string?> GetStoredTokenAsync()
         {
             try
             {
-                return _jsRuntime.InvokeAsync<string>("localStorage.getItem", TOKEN_KEY).GetAwaiter().GetResult();
+                // Zuerst versuchen, Token aus localStorage zu holen
+                var token = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", TOKEN_KEY);
+
+                if (!string.IsNullOrEmpty(token))
+                {
+                    return token;
+                }
+
+                // Falls localStorage nicht verfügbar oder leer, aus Cookie lesen
+                var httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext?.Request.Cookies.TryGetValue(COOKIE_KEY, out var cookieToken) == true)
+                {
+                    // Token auch in localStorage speichern für zukünftige Verwendung
+                    if (!string.IsNullOrEmpty(cookieToken))
+                    {
+                        try
+                        {
+                            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", TOKEN_KEY, cookieToken);
+                        }
+                        catch
+                        {
+                            // localStorage nicht verfügbar, aber Cookie funktioniert
+                        }
+                    }
+                    return cookieToken;
+                }
+
+                return null;
             }
             catch
             {
+                // Fallback: Nur Cookie verwenden
+                try
+                {
+                    var httpContext = _httpContextAccessor.HttpContext;
+                    if (httpContext?.Request.Cookies.TryGetValue(COOKIE_KEY, out var cookieToken) == true)
+                    {
+                        return cookieToken;
+                    }
+                }
+                catch
+                {
+                    // Alles fehlgeschlagen
+                }
                 return null;
             }
         }
 
-        public void StoreToken(string token)
+        public async Task StoreTokenAsync(string token)
         {
-            _jsRuntime.InvokeVoidAsync("localStorage.setItem", TOKEN_KEY, token);
+            try
+            {
+                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", TOKEN_KEY, token);
+            }
+            catch
+            {
+                // localStorage nicht verfügbar - Token ist hoffentlich im Cookie gespeichert
+            }
         }
 
-        public void RemoveToken()
+        public async Task RemoveTokenAsync()
         {
-            _jsRuntime.InvokeVoidAsync("localStorage.removeItem", TOKEN_KEY);
+            try
+            {
+                await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", TOKEN_KEY);
+            }
+            catch
+            {
+                // localStorage nicht verfügbar
+            }
+
+            // Cookie auch entfernen
+            try
+            {
+                var httpContext = _httpContextAccessor.HttpContext;
+                if (httpContext != null)
+                {
+                    httpContext.Response.Cookies.Delete(COOKIE_KEY);
+                }
+            }
+            catch
+            {
+                // Cookie konnte nicht entfernt werden
+            }
         }
 
         public bool IsTokenExpired(string token)
