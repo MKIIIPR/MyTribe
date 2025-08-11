@@ -1,0 +1,281 @@
+﻿@page "/test"
+@using Microsoft.AspNetCore.Authorization
+@using Tribe.Client.Services
+@using Tribe.Client.Models
+@inject IApiService ApiService
+@inject IAuthService AuthService
+@inject ISignalRService SignalRService
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize]
+
+<PageTitle>Test Page</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-16">
+    <MudText Typo="Typo.h3" GutterBottom="true">API Test Page</MudText>
+    
+    <!-- SignalR Status -->
+    <MudCard Class="mb-4">
+        <MudCardContent>
+            <MudText Typo="Typo.h6">SignalR Connection Status</MudText>
+            <MudText Color="@(SignalRService.IsConnected ? Color.Success : Color.Error)">
+                @(SignalRService.IsConnected ? "Connected" : "Disconnected")
+            </MudText>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="ConnectSignalR" Disabled="SignalRService.IsConnected">
+                Connect
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="DisconnectSignalR" Disabled="!SignalRService.IsConnected">
+                Disconnect
+            </MudButton>
+        </MudCardContent>
+    </MudCard>
+
+    <!-- API Test Buttons -->
+    <MudCard Class="mb-4">
+        <MudCardContent>
+            <MudText Typo="Typo.h6" Class="mb-4">API Tests</MudText>
+            
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="TestPublicEndpoint" Class="ma-2">
+                Test Public Endpoint
+            </MudButton>
+            
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="TestProtectedEndpoint" Class="ma-2">
+                Test Protected Endpoint
+            </MudButton>
+            
+            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" OnClick="GetCurrentUser" Class="ma-2">
+                Get Current User
+            </MudButton>
+        </MudCardContent>
+    </MudCard>
+
+    <!-- Logout Button -->
+    <MudCard Class="mb-4">
+        <MudCardContent>
+            <MudText Typo="Typo.h6" Class="mb-4">Authentication</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="LogoutClient" Class="ma-2">
+                Client Logout
+            </MudButton>
+        </MudCardContent>
+    </MudCard>
+
+    <!-- Results Display -->
+    <MudCard>
+        <MudCardContent>
+            <MudText Typo="Typo.h6">Results</MudText>
+            
+            @if (isLoading)
+            {
+                <MudProgressCircular Indeterminate="true" />
+            }
+            else if (!string.IsNullOrEmpty(lastResult))
+            {
+                <MudAlert Severity="@lastSeverity" Class="mt-4">
+                    <pre>@lastResult</pre>
+                </MudAlert>
+            }
+
+            <!-- SignalR Events Log -->
+            @if (signalREvents.Any())
+            {
+                <MudText Typo="Typo.h6" Class="mt-4">SignalR Events</MudText>
+                <MudList T="string">
+
+                    @foreach (var eventMsg in signalREvents.TakeLast(5))
+                    {
+                        <MudListItem  Text="@eventMsg" />
+                    }
+                </MudList>
+            }
+        </MudCardContent>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private bool isLoading = false;
+    private string lastResult = string.Empty;
+    private Severity lastSeverity = Severity.Info;
+    private List<string> signalREvents = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Subscribe to SignalR events
+        SignalRService.UserLoggedIn += OnUserLoggedIn;
+        SignalRService.UserLoggedOut += OnUserLoggedOut;
+
+        // Start SignalR connection
+        await ConnectSignalR();
+    }
+
+    private async Task ConnectSignalR()
+    {
+        try
+        {
+            await SignalRService.StartAsync();
+            StateHasChanged();
+            AddSignalREvent("SignalR connected");
+        }
+        catch (Exception ex)
+        {
+            AddSignalREvent($"SignalR connection failed: {ex.Message}");
+        }
+    }
+
+    private async Task DisconnectSignalR()
+    {
+        await SignalRService.StopAsync();
+        StateHasChanged();
+        AddSignalREvent("SignalR disconnected");
+    }
+
+    private async Task TestPublicEndpoint()
+    {
+        isLoading = true;
+        try
+        {
+            var result = await ApiService.GetAsync<object>("api/test/public");
+            if (result != null)
+            {
+                lastResult = System.Text.Json.JsonSerializer.Serialize(result, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                lastSeverity = Severity.Success;
+            }
+            else
+            {
+                lastResult = "No data received from public endpoint";
+                lastSeverity = Severity.Warning;
+            }
+        }
+        catch (Exception ex)
+        {
+            lastResult = $"Error: {ex.Message}";
+            lastSeverity = Severity.Error;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task TestProtectedEndpoint()
+    {
+        isLoading = true;
+        try
+        {
+            // Set token before making request
+            var token = AuthService.GetStoredToken();
+            if (!string.IsNullOrEmpty(token))
+            {
+                ApiService.SetAuthToken(token);
+            }
+
+            var result = await ApiService.GetAsync<object>("api/test/protected");
+            if (result != null)
+            {
+                lastResult = System.Text.Json.JsonSerializer.Serialize(result, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                lastSeverity = Severity.Success;
+            }
+            else
+            {
+                lastResult = "No data received from protected endpoint - check authentication";
+                lastSeverity = Severity.Warning;
+            }
+        }
+        catch (Exception ex)
+        {
+            lastResult = $"Error: {ex.Message}";
+            lastSeverity = Severity.Error;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task GetCurrentUser()
+    {
+        isLoading = true;
+        try
+        {
+            var user = await AuthService.GetCurrentUserAsync();
+            if (user != null)
+            {
+                lastResult = System.Text.Json.JsonSerializer.Serialize(user, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                lastSeverity = Severity.Success;
+            }
+            else
+            {
+                lastResult = "No user data received - check authentication";
+                lastSeverity = Severity.Warning;
+            }
+        }
+        catch (Exception ex)
+        {
+            lastResult = $"Error: {ex.Message}";
+            lastSeverity = Severity.Error;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LogoutClient()
+    {
+        isLoading = true;
+        try
+        {
+            var success = await AuthService.LogoutAsync();
+            if (success)
+            {
+                lastResult = "Client logout successful";
+                lastSeverity = Severity.Success;
+                
+                // Notify the authentication state provider
+                if (AuthStateProvider is CustomAuthenticationStateProvider customProvider)
+                {
+                    customProvider.NotifyUserLogout();
+                }
+            }
+            else
+            {
+                lastResult = "Client logout failed";
+                lastSeverity = Severity.Error;
+            }
+        }
+        catch (Exception ex)
+        {
+            lastResult = $"Logout error: {ex.Message}";
+            lastSeverity = Severity.Error;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OnUserLoggedIn(string userId, string userName)
+    {
+        AddSignalREvent($"User logged in: {userName} (ID: {userId})");
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnUserLoggedOut(string userId, string userName)
+    {
+        AddSignalREvent($"User logged out: {userName} (ID: {userId})");
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void AddSignalREvent(string message)
+    {
+        signalREvents.Add($"{DateTime.Now:HH:mm:ss} - {message}");
+        if (signalREvents.Count > 20)
+        {
+            signalREvents.RemoveAt(0);
+        }
+    }
+
+    public void Dispose()
+    {
+        SignalRService.UserLoggedIn -= OnUserLoggedIn;
+        SignalRService.UserLoggedOut -= OnUserLoggedOut;
+    }
+}

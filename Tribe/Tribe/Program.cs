@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
 using Tribe.Client.Pages;
+using Tribe.Client.Services;
 using Tribe.Components;
 using Tribe.Components.Account;
 using Tribe.Data;
@@ -15,10 +16,12 @@ builder.Services.AddMudServices();
 builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents()
     .AddAuthenticationStateSerialization();
-
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IApiService, ApiService>();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
+builder.Services.AddHttpClient();
 
 builder.Services.AddAuthentication(options =>
     {
