@@ -1,35 +1,51 @@
-﻿@implements IDisposable
-
+﻿@using MyTribe.Client.Services
+@implements IDisposable
 @inject NavigationManager NavigationManager
 
-<MudNavMenu>
-    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
-    <MudNavLink Href="counter" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">Counter</MudNavLink>
-    
-    <MudNavLink Href="weather" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.List">Weather</MudNavLink>
+@inject IJSRuntime JSRuntime
 
-    <MudNavLink Href="auth" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Lock">Auth Required</MudNavLink>
+<MudNavMenu>
+    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
+        Home
+    </MudNavLink>
+
+    <MudNavLink Href="counter" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">
+        Counter
+    </MudNavLink>
+
+    <MudNavLink Href="weather" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.List">
+        Weather
+    </MudNavLink>
+
+    <MudNavLink Href="auth" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Lock">
+        Auth Required
+    </MudNavLink>
+
     <AuthorizeView>
         <Authorized>
-            <MudNavLink Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">@context.User.Identity?.Name</MudNavLink>
-            <form action="Account/Logout" method="post">
-                <AntiforgeryToken />
-                <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                <button type="submit" class="mud-nav-link mud-ripple">
-                    <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Info" Class="mr-3"></MudIcon> Logout
-                </button>
-            </form>
+            <MudNavLink Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
+                @context.User.Identity?.Name
+            </MudNavLink>
+
+            <MudNavLink OnClick="HandleSecureLogout" Icon="@Icons.Material.Filled.Logout" Disabled="@_isLoggingOut">
+                @(_isLoggingOut ? "Logging out..." : "Logout")
+            </MudNavLink>
         </Authorized>
         <NotAuthorized>
-            <MudNavLink Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">Register</MudNavLink>
-            <MudNavLink Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">Login</MudNavLink>
+            <MudNavLink Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">
+                Register
+            </MudNavLink>
+
+            <MudNavLink Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">
+                Login
+            </MudNavLink>
         </NotAuthorized>
     </AuthorizeView>
 </MudNavMenu>
 
-
 @code {
     private string? currentUrl;
+    private bool _isLoggingOut = false;
 
     protected override void OnInitialized()
     {
@@ -43,9 +59,68 @@
         StateHasChanged();
     }
 
+    private async Task HandleSecureLogout()
+    {
+        if (_isLoggingOut) return;
+
+        _isLoggingOut = true;
+        StateHasChanged();
+
+        // try
+        // {
+        //     // 1. Service-basierten Logout durchführen
+        //     var success = await AuthService.LogoutAsync();
+
+        //     // 2. Zusätzliche Client-seitige Bereinigung
+        //     await JSRuntime.InvokeVoidAsync("clearClientStorage");
+
+        //     // 3. Browser-Cache leeren (soweit möglich)
+        //     await JSRuntime.InvokeVoidAsync("location.reload", true);
+        // }
+        // catch (Exception ex)
+        // {
+        //     Console.WriteLine($"Secure logout error: {ex.Message}");
+        //     // Fallback: harte Navigation zur Login-Seite
+        //     NavigationManager.NavigateTo("/Account/Login", forceLoad: true);
+        // }
+        // finally
+        // {
+        //     _isLoggingOut = false;
+        // }
+    }
+
     public void Dispose()
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }
 
+<script>
+    window.clearClientStorage = () => {
+        // LocalStorage leeren
+        if (typeof(Storage) !== "undefined") {
+            localStorage.clear();
+            sessionStorage.clear();
+        }
+
+        // IndexedDB leeren (falls verwendet)
+        if ('indexedDB' in window) {
+            indexedDB.databases().then(databases => {
+                databases.forEach(db => {
+                    if (db.name) {
+                        indexedDB.deleteDatabase(db.name);
+                    }
+                });
+            });
+        }
+
+        // Service Worker Cache leeren (falls vorhanden)
+        if ('caches' in window) {
+            caches.keys().then(cacheNames => {
+                cacheNames.forEach(cacheName => {
+                    caches.delete(cacheName);
+                });
+            });
+        }
+    };
+</script>
