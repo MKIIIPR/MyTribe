@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
+using Tribe.Bib.Models.TribeRelated;
 using Tribe.Components.Account.Pages;
 using Tribe.Components.Account.Pages.Manage;
 using Tribe.Data;

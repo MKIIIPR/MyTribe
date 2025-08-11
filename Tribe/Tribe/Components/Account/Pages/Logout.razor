@@ -1,0 +1,51 @@
+﻿@page "/Account/Logout"
+@using Microsoft.AspNetCore.Identity
+@using Tribe.Bib.Models.TribeRelated
+@using Tribe.Data
+@using Tribe.Services
+@using System.Security.Claims
+@using Tribe.Services.ServerServices
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject ILogger<Logout> Logger
+@inject IdentityRedirectManager RedirectManager
+@inject IAuthNotificationService AuthNotificationService
+
+<PageTitle>Log out</PageTitle>
+
+<h1>Log out</h1>
+<p>You have been logged out of the application.</p>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = HttpContext.User;
+        if (user?.Identity?.IsAuthenticated == true)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userName = user.FindFirst(ClaimTypes.Name)?.Value ?? user.FindFirst(ClaimTypes.Email)?.Value;
+
+            // Sign out from server
+            await SignInManager.SignOutAsync();
+
+            // Remove JWT cookie
+            HttpContext.Response.Cookies.Delete("jwt_token");
+
+            // Notify all clients via SignalR
+            if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(userName))
+            {
+                await AuthNotificationService.NotifyUserLoggedOutAsync(userId, userName);
+            }
+
+            Logger.LogInformation("User logged out with SignalR notification sent.");
+        }
+
+        RedirectManager.RedirectTo(ReturnUrl);
+    }
+}

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Tribe.Bib.Models.TribeRelated;
 using Tribe.Data;
 
 namespace Tribe.Components.Account

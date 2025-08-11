@@ -1,7 +1,6 @@
 ﻿using Microsoft.JSInterop;
 using System.IdentityModel.Tokens.Jwt;
-using System.Text.Json;
-using Tribe.Client.Models;
+using static Tribe.Bib.CommunicationModels.ComModels;
 
 namespace Tribe.Client.Services
 {

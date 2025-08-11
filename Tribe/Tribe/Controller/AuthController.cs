@@ -2,8 +2,10 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
+using Tribe.Bib.Models.TribeRelated;
 using Tribe.Data;
-using Tribe.Services;
+using Tribe.Services.ServerServices;
+using static Tribe.Bib.CommunicationModels.ComModels;
 
 namespace Tribe.Controllers;
 
@@ -29,7 +31,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    public async Task<IActionResult> Login([FromBody] Bib.CommunicationModels.ComModels.LoginRequest request)
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
         if (user == null)
@@ -102,6 +104,7 @@ public class AuthController : ControllerBase
             user.Email,
             user.LastLoginAt,
             user.IsActive
+            
         });
     }
 }

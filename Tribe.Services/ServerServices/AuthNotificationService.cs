@@ -1,7 +1,8 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using Tribe.Hubs;
+using Tribe.Services.Hubs;
 
-namespace Tribe.Services;
+
+namespace Tribe.Services.ServerServices;
 public interface IAuthNotificationService
 {
     Task NotifyUserLoggedInAsync(string userId, string userName);

@@ -1,10 +1,11 @@
-﻿using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Tribe.Data;
+using Tribe.Bib.Models.TribeRelated;
 
-namespace Tribe.Services;
+namespace Tribe.Services.ServerServices;
 
 public interface IJwtTokenService
 {

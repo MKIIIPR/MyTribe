@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 
-namespace Tribe.Hubs;
+namespace Tribe.Services.Hubs;
 
 public class AuthHub : Hub
 {
