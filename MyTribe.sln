@@ -3,7 +3,25 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36017.23
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tribe", "Tribe\Tribe\Tribe.csproj", "{A4853678-A88E-4559-9740-230048F8EF47}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tribe.Client", "Tribe\Tribe.Client\Tribe.Client.csproj", "{7210AA4B-D9DC-4A84-A485-10342DAC5AC7}"
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A4853678-A88E-4559-9740-230048F8EF47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4853678-A88E-4559-9740-230048F8EF47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4853678-A88E-4559-9740-230048F8EF47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4853678-A88E-4559-9740-230048F8EF47}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7210AA4B-D9DC-4A84-A485-10342DAC5AC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7210AA4B-D9DC-4A84-A485-10342DAC5AC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7210AA4B-D9DC-4A84-A485-10342DAC5AC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7210AA4B-D9DC-4A84-A485-10342DAC5AC7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
