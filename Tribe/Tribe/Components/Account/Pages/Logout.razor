@@ -1,22 +1,42 @@
 ﻿@page "/Account/Logout"
 @using Microsoft.AspNetCore.Identity
-@using Tribe.Bib.Models.TribeRelated
 @using Tribe.Data
-@using Tribe.Services
-@using System.Security.Claims
 @using Tribe.Services.ServerServices
+@using Tribe.Client.Services
 
 @inject SignInManager<ApplicationUser> SignInManager
 @inject ILogger<Logout> Logger
-@inject IdentityRedirectManager RedirectManager
+@inject NavigationManager NavigationManager
 @inject IAuthNotificationService AuthNotificationService
+@inject IAuthService AuthService
 
-<PageTitle>Log out</PageTitle>
+<PageTitle>Logout</PageTitle>
 
-<h1>Log out</h1>
-<p>You have been logged out of the application.</p>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="text-center">
+                @if (isLoggingOut)
+                {
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Logging out...</span>
+                    </div>
+                    <p class="mt-3">Logging you out...</p>
+                }
+                else
+                {
+                    <h2>Logout</h2>
+                    <p>You have been successfully logged out.</p>
+                    <a href="/" class="btn btn-primary">Go to Home</a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
+    private bool isLoggingOut = true;
+
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
 
@@ -25,27 +45,40 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var user = HttpContext.User;
-        if (user?.Identity?.IsAuthenticated == true)
+        try
         {
-            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var userName = user.FindFirst(ClaimTypes.Name)?.Value ?? user.FindFirst(ClaimTypes.Email)?.Value;
+            // Get current user for SignalR notification
+            var user = await SignInManager.UserManager.GetUserAsync(HttpContext.User);
 
-            // Sign out from server
+            // Sign out from Identity
             await SignInManager.SignOutAsync();
 
             // Remove JWT cookie
-            HttpContext.Response.Cookies.Delete("jwt_token");
-
-            // Notify all clients via SignalR
-            if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(userName))
+            HttpContext.Response.Cookies.Delete("jwt_token", new CookieOptions
             {
-                await AuthNotificationService.NotifyUserLoggedOutAsync(userId, userName);
+                Path = "/",
+                SameSite = SameSiteMode.Strict
+            });
+
+            // Notify SignalR clients
+            if (user != null)
+            {
+                await AuthNotificationService.NotifyUserLoggedOutAsync(user.Id, user.UserName!);
             }
 
-            Logger.LogInformation("User logged out with SignalR notification sent.");
-        }
+            Logger.LogInformation($"User {user?.UserName} logged out successfully.");
 
-        RedirectManager.RedirectTo(ReturnUrl);
+            isLoggingOut = false;
+
+            // Redirect after a short delay
+            await Task.Delay(1500);
+            NavigationManager.NavigateTo(ReturnUrl ?? "/", forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during logout");
+            isLoggingOut = false;
+            NavigationManager.NavigateTo("/", forceLoad: true);
+        }
     }
 }

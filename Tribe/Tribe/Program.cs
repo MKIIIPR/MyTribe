@@ -173,7 +173,8 @@ app.UseAuthorization();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveWebAssemblyRenderMode()
-    .AddAdditionalAssemblies(typeof(Tribe.Client._Imports).Assembly);
+    .AddAdditionalAssemblies(typeof(Tribe.Client._Imports).Assembly)
+    .AddAdditionalAssemblies(typeof(Tribe.Ui._Imports).Assembly);
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();

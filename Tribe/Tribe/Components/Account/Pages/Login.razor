@@ -64,7 +64,6 @@
 
 @code {
     private string? errorMessage;
-    private string? pendingToken;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -83,24 +82,6 @@
         }
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        // JavaScript Interop nur nach dem ersten Render ausführen
-        if (firstRender && !string.IsNullOrEmpty(pendingToken))
-        {
-            try
-            {
-                await JS.InvokeVoidAsync("localStorage.setItem", "authToken", pendingToken);
-                Logger.LogDebug("JWT token stored in localStorage after render.");
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning($"Could not store token in localStorage: {ex.Message}");
-            }
-            pendingToken = null;
-        }
-    }
-
     public async Task LoginUser()
     {
         var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
@@ -116,7 +97,7 @@
                 user.LastLoginAt = DateTime.UtcNow;
                 await SignInManager.UserManager.UpdateAsync(user);
 
-                // CRITICAL: Store JWT token properly for client access
+                // WICHTIG: Store JWT token in cookie (das funktioniert immer)
                 var cookieOptions = new CookieOptions
                 {
                     HttpOnly = false, // WICHTIG: Allow JavaScript access
@@ -127,13 +108,10 @@
 
                 HttpContext.Response.Cookies.Append("jwt_token", token, cookieOptions);
 
-                // Token für späteren JavaScript Interop speichern
-                pendingToken = token;
-
                 // Notify all clients via SignalR
                 await AuthNotificationService.NotifyUserLoggedInAsync(user.Id, user.UserName!);
 
-                Logger.LogInformation($"User {user.UserName} logged in with JWT token generated and stored.");
+                Logger.LogInformation($"User {user.UserName} logged in with JWT token stored in cookie.");
             }
 
             RedirectManager.RedirectTo(ReturnUrl);

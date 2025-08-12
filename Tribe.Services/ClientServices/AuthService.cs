@@ -1,6 +1,8 @@
-﻿using Microsoft.JSInterop;
-using System.IdentityModel.Tokens.Jwt;
+﻿using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.JSInterop;
+using System.IdentityModel.Tokens.Jwt;
 using static Tribe.Bib.CommunicationModels.ComModels;
 
 namespace Tribe.Client.Services
@@ -56,8 +58,14 @@ namespace Tribe.Client.Services
                     await _apiService.PostAsync<object, object>("api/auth/logout", new { });
                 }
 
+                // Token aus localStorage entfernen
                 await RemoveTokenAsync();
                 _apiService.RemoveAuthToken();
+
+                // WICHTIG: Zur Logout-Seite navigieren, die den Cookie serverseitig entfernt
+                var navigationManager = _httpContextAccessor.HttpContext?.RequestServices.GetService<NavigationManager>();
+                navigationManager?.NavigateTo("/Account/Logout", forceLoad: true);
+
                 return true;
             }
             catch
@@ -82,57 +90,42 @@ namespace Tribe.Client.Services
 
         public async Task<string?> GetStoredTokenAsync()
         {
+            // PRIMÄR: Cookie verwenden (funktioniert immer in Blazor Server)
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext?.Request.Cookies.TryGetValue(COOKIE_KEY, out var cookieToken) == true)
+            {
+                if (!string.IsNullOrEmpty(cookieToken))
+                {
+                    // Versuchen, auch in localStorage zu speichern (falls JS verfügbar)
+                    await TryStoreInLocalStorageAsync(cookieToken);
+                    return cookieToken;
+                }
+            }
+
+            // SEKUNDÄR: localStorage versuchen (falls verfügbar)
             try
             {
-                // Zuerst versuchen, Token aus localStorage zu holen
                 var token = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", TOKEN_KEY);
-
                 if (!string.IsNullOrEmpty(token))
                 {
                     return token;
                 }
-
-                // Falls localStorage nicht verfügbar oder leer, aus Cookie lesen
-                var httpContext = _httpContextAccessor.HttpContext;
-                if (httpContext?.Request.Cookies.TryGetValue(COOKIE_KEY, out var cookieToken) == true)
-                {
-                    // Token auch in localStorage speichern für zukünftige Verwendung
-                    if (!string.IsNullOrEmpty(cookieToken))
-                    {
-                        try
-                        {
-                            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", TOKEN_KEY, cookieToken);
-                        }
-                        catch
-                        {
-                            // localStorage nicht verfügbar, aber Cookie funktioniert
-                        }
-                    }
-                    return cookieToken;
-                }
-
-                return null;
             }
             catch
             {
-                // Fallback: Nur Cookie verwenden
-                try
-                {
-                    var httpContext = _httpContextAccessor.HttpContext;
-                    if (httpContext?.Request.Cookies.TryGetValue(COOKIE_KEY, out var cookieToken) == true)
-                    {
-                        return cookieToken;
-                    }
-                }
-                catch
-                {
-                    // Alles fehlgeschlagen
-                }
-                return null;
+                // localStorage nicht verfügbar - das ist OK, Cookie funktioniert
             }
+
+            return null;
         }
 
         public async Task StoreTokenAsync(string token)
+        {
+            // Nur localStorage versuchen - Cookie wird vom Server gesetzt
+            await TryStoreInLocalStorageAsync(token);
+        }
+
+        private async Task TryStoreInLocalStorageAsync(string token)
         {
             try
             {
@@ -140,33 +133,48 @@ namespace Tribe.Client.Services
             }
             catch
             {
-                // localStorage nicht verfügbar - Token ist hoffentlich im Cookie gespeichert
+                // localStorage nicht verfügbar - das ist OK, Cookie funktioniert
             }
         }
 
         public async Task RemoveTokenAsync()
         {
+            // localStorage versuchen zu leeren
             try
             {
                 await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", TOKEN_KEY);
             }
             catch
             {
-                // localStorage nicht verfügbar
+                // Nicht kritisch
             }
 
-            // Cookie auch entfernen
+            // Cookie via JavaScript entfernen (funktioniert besser als Response.Cookies.Delete)
             try
             {
-                var httpContext = _httpContextAccessor.HttpContext;
-                if (httpContext != null)
-                {
-                    httpContext.Response.Cookies.Delete(COOKIE_KEY);
-                }
+                await _jsRuntime.InvokeVoidAsync("eval",
+                    $"document.cookie = '{COOKIE_KEY}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict'");
             }
             catch
             {
-                // Cookie konnte nicht entfernt werden
+                // JavaScript Cookie-Entfernung fehlgeschlagen
+                // Versuche als Fallback Response.Cookies (funktioniert nur in bestimmten Kontexten)
+                try
+                {
+                    var httpContext = _httpContextAccessor.HttpContext;
+                    if (httpContext != null)
+                    {
+                        httpContext.Response.Cookies.Delete(COOKIE_KEY, new CookieOptions
+                        {
+                            Path = "/",
+                            SameSite = SameSiteMode.Strict
+                        });
+                    }
+                }
+                catch
+                {
+                    // Auch das hat nicht funktioniert - nicht kritisch
+                }
             }
         }
 

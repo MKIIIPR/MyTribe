@@ -1,0 +1,136 @@
+﻿
+@using Microsoft.AspNetCore.Components.Forms
+@using MudBlazor
+@using System.ComponentModel.DataAnnotations
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8 mb-8">
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudText Typo="Typo.h4" GutterBottom="true" Class="mb-6">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-3" />
+            Profil erstellen
+        </MudText>
+
+     
+            <MudGrid>
+                <!-- Anzeigename -->
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Profile.DisplayName"
+                                 Label="Anzeigename *"
+                                 Variant="Variant.Outlined"
+                                 Placeholder="Wie möchtest du genannt werden?"
+                                 MaxLength="100"
+                                 Counter="100"
+                                 Required="true"
+                                 For="@(() => Profile.DisplayName)" />
+                </MudItem>
+
+                <!-- Avatar URL -->
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Profile.AvatarUrl"
+                                 Label="Avatar-URL (optional)"
+                                 Variant="Variant.Outlined"
+                                 Placeholder="https://example.com/avatar.jpg"
+                                 HelperText="Gib eine Bild-URL ein, um ein Profilbild festzulegen." />
+                </MudItem>
+
+                <!-- Avatar Vorschau -->
+                @if (!string.IsNullOrEmpty(Profile.AvatarUrl))
+                {
+                    <MudItem xs="12">
+                        <MudPaper Elevation="1" Class="pa-2 d-inline-flex" Style="border-radius: 50%;">
+                            <MudAvatar Image="@Profile.AvatarUrl" Size="Size.Medium" />
+                        </MudPaper>
+                    </MudItem>
+                }
+
+                <!-- Bio -->
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Profile.Bio"
+                                 Label="Über mich"
+                                 Variant="Variant.Outlined"
+                                 Placeholder="Erzähl uns etwas über dich..."
+                                 MaxLength="500"
+                                 Counter="500"
+                                 Multiline="true"
+                                 Rows="3"
+                                 HelperText="Optional – max. 500 Zeichen" />
+                </MudItem>
+
+                <!-- Profil-Typ -->
+                <MudItem xs="12" md="6">
+                    <MudSelect @bind-Value="Profile.ProfileType"
+                              Label="Profil-Typ"
+                              Variant="Variant.Outlined"
+                              For="@(() => Profile.ProfileType)">
+                        <MudSelectItem Value="@Constants.ProfileTypes.Regular">Standardprofil</MudSelectItem>
+                        <MudSelectItem Value="@Constants.ProfileTypes.Creator">Creator-Profil</MudSelectItem>
+          
+                    </MudSelect>
+                </MudItem>
+
+                <!-- IsCreator automatisch setzen -->
+                <MudItem xs="12" md="6">
+                    <MudAlert Severity="Severity.Info" Class="mt-4">
+                        @if (Profile.ProfileType == Constants.ProfileTypes.Creator)
+                        {
+                            <strong>Creator-Modus aktiviert!</strong>
+                        }
+                        else
+                        {
+                            <>Dies ist ein reguläres Profil.</>
+                        }
+                    </MudAlert>
+                </MudItem>
+            </MudGrid>
+
+            <MudDivider Class="my-6" />
+
+            <MudStack Row="true" Spacing="4" Justify="Justify.FlexEnd" Class="mt-4">
+                <MudButton Type="reset" Variant="Variant.Text" Color="Color.Secondary" OnClick="Cancel">
+                    Abbrechen
+                </MudButton>
+                <MudButton ButtonType="ButtonType.Submit" 
+                            OnClick="HandleValidSubmit" 
+                          Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Filled.Save">
+                    Profil speichern
+                </MudButton>
+            </MudStack>
+    
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private TribeProfile Profile { get; set; } = new();
+
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    protected override void OnParametersSet()
+    {
+        // Aktualisiere IsCreator basierend auf Profil-Typ
+        Profile.IsCreator = Profile.ProfileType == Constants.ProfileTypes.Creator;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            // Hier API aufrufen, um Profil zu speichern
+            // Beispiel: await ProfileService.CreateAsync(Profile);
+            
+            Snackbar.Add("Profil erfolgreich erstellt!", Severity.Success);
+           
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler beim Speichern: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel()
+    {
+       
+    }
+}

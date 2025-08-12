@@ -1,0 +1,298 @@
+﻿
+@using Microsoft.AspNetCore.Identity
+@using System.ComponentModel.DataAnnotations
+@using MudBlazor
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Elevation="2" Class="pa-6">
+        <MudText Typo="Typo.h4" GutterBottom="true">
+            <MudIcon Icon="Icons.Material.Filled.Edit" Class="mr-3" />
+            Benutzerprofil bearbeiten
+        </MudText>
+
+        @if (_isLoading)
+        {
+            <MudProgressCircular Indeterminate="true" />
+        }
+        else if (User != null)
+        {
+           
+                
+                <MudGrid>
+                    <!-- Persönliche Daten -->
+                    <MudItem xs="12">
+                        <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">
+                            <MudIcon Icon="Icons.Material.Filled.PersonOutline" Class="mr-2" />
+                            Persönliche Daten
+                        </MudText>
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="User.FullName" 
+                                     Label="Vollständiger Name"
+                                     Variant="Variant.Outlined"
+                                     MaxLength="100"
+                                     Counter="100"
+                                     For="@(() => User.FullName)" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudDatePicker @bind-Date="User.DateOfBirth" 
+                                      Label="Geburtsdatum"
+                                      Variant="Variant.Outlined"
+                                      DateFormat="dd.MM.yyyy"
+                                      MaxDate="DateTime.Today.AddYears(-18)"
+                                      For="@(() => User.DateOfBirth)" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="User.Nationality" 
+                                     Label="Nationalität"
+                                     Variant="Variant.Outlined"
+                                     MaxLength="50"
+                                     For="@(() => User.Nationality)" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudTextField Value="@User?.Email" 
+                                     Label="E-Mail"
+                                     Variant="Variant.Outlined"
+                                     ReadOnly="true"
+                                     HelperText="E-Mail kann nicht geändert werden" />
+                    </MudItem>
+
+                    <!-- Adresse -->
+                    <MudItem xs="12" Class="mt-6">
+                        <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">
+                            <MudIcon Icon="Icons.Material.Filled.LocationOn" Class="mr-2" />
+                            Adresse
+                        </MudText>
+                    </MudItem>
+
+                    <MudItem xs="12" md="8">
+                        <MudTextField T="string" @bind-Value="User.Street" 
+                                     Label="Straße"
+                                     Variant="Variant.Outlined"
+                                     MaxLength="100"
+                                     For="@(() => User.Street)" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudTextField T="string" @bind-Value="User.HouseNumber" 
+                                     Label="Hausnummer"
+                                     Variant="Variant.Outlined"
+                                     MaxLength="10"
+                                     For="@(() => User.HouseNumber)" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="3">
+                        <MudTextField @bind-Value="User.PostalCode" 
+                                     Label="Postleitzahl"
+                                     Variant="Variant.Outlined"
+                                     MaxLength="10"
+                                     For="@(() => User.PostalCode)" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="5">
+                        <MudTextField @bind-Value="User.City" 
+                                     Label="Stadt"
+                                     Variant="Variant.Outlined"
+                                     MaxLength="100"
+                                     For="@(() => User.City)" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudTextField @bind-Value="User.StateOrRegion" 
+                                     Label="Bundesland/Region"
+                                     Variant="Variant.Outlined"
+                                     MaxLength="50"
+                                     For="@(() => User.StateOrRegion)" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudSelect @bind-Value="User.CountryCode" 
+                                  Label="Land"
+                                  Variant="Variant.Outlined"
+                                  For="@(() => User.CountryCode)">
+                            <MudSelectItem Value="@("DE")">Deutschland</MudSelectItem>
+                            <MudSelectItem Value="@("AT")">Österreich</MudSelectItem>
+                            <MudSelectItem Value="@("CH")">Schweiz</MudSelectItem>
+                            <MudSelectItem Value="@("FR")">Frankreich</MudSelectItem>
+                            <MudSelectItem Value="@("IT")">Italien</MudSelectItem>
+                            <MudSelectItem Value="@("NL")">Niederlande</MudSelectItem>
+                            <MudSelectItem Value="@("BE")">Belgien</MudSelectItem>
+                            <MudSelectItem Value="@("US")">USA</MudSelectItem>
+                            <MudSelectItem Value="@("GB")">Großbritannien</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+
+                    <!-- Geschäftsdaten -->
+                    <MudItem xs="12" Class="mt-6">
+                        <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">
+                            <MudIcon Icon="Icons.Material.Filled.Business" Class="mr-2" />
+                            Geschäftsdaten
+                        </MudText>
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="User.CompanyName" 
+                                     Label="Firmenname"
+                                     Variant="Variant.Outlined"
+                                     MaxLength="200"
+                                     For="@(() => User.CompanyName)" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudSelect T="string" @bind-Value="User.LegalForm" 
+                                  Label="Rechtsform"
+                                  Variant="Variant.Outlined"
+                                  For="@(() => User.LegalForm)">
+                            <MudSelectItem Value="@("Einzelunternehmen")">Einzelunternehmen</MudSelectItem>
+                            <MudSelectItem Value="@("GmbH")">GmbH</MudSelectItem>
+                            <MudSelectItem Value="@("UG")">UG (haftungsbeschränkt)</MudSelectItem>
+                            <MudSelectItem Value="@("AG")">AG</MudSelectItem>
+                            <MudSelectItem Value="@("GbR")">GbR</MudSelectItem>
+                            <MudSelectItem Value="@("OHG")">OHG</MudSelectItem>
+                            <MudSelectItem Value="@("KG")">KG</MudSelectItem>
+                            <MudSelectItem Value="@("e.V.")">e.V.</MudSelectItem>
+                            <MudSelectItem Value="@("Freiberufler")">Freiberufler</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="User.TaxNumber" 
+                                     Label="Steuernummer"
+                                     Variant="Variant.Outlined"
+                                     MaxLength="50"
+                                     HelperText="Format: 123/456/78901"
+                                     For="@(() => User.TaxNumber)" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudTextField @bind-Value="User.VATId" 
+                                     Label="Umsatzsteuer-Identifikationsnummer"
+                                     Variant="Variant.Outlined"
+                                     MaxLength="50"
+                                     HelperText="Format: DE123456789"
+                                     For="@(() => User.VATId)" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudSwitch T="bool" @bind-Checked="User.IsVATPayer" 
+                                  Label="Ich bin umsatzsteuerpflichtig" 
+                                  Color="Color.Primary" />
+                    </MudItem>
+
+                    <!-- Zahlungsinformationen -->
+                    <MudItem xs="12" Class="mt-6">
+                        <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">
+                            <MudIcon Icon="Icons.Material.Filled.Payment" Class="mr-2" />
+                            Zahlungsinformationen
+                        </MudText>
+                        <MudAlert Severity="Severity.Info" Class="mb-4">
+                            Diese Daten werden verschlüsselt gespeichert und dienen zur Integration mit Zahlungsanbietern.
+                        </MudAlert>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudTextField @bind-Value="User.StripeAccountId" 
+                                     Label="Stripe Account ID"
+                                     Variant="Variant.Outlined"
+                                     MaxLength="100"
+                                     For="@(() => User.StripeAccountId)" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudTextField @bind-Value="User.ShopifyToken" 
+                                     Label="Shopify Token"
+                                     Variant="Variant.Outlined"
+                                     MaxLength="100"
+                                     For="@(() => User.ShopifyToken)" />
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudTextField @bind-Value="User.PaypalPayerId" 
+                                     Label="PayPal Payer ID"
+                                     Variant="Variant.Outlined"
+                                     MaxLength="100"
+                                     For="@(() => User.PaypalPayerId)" />
+                    </MudItem>
+
+                    <!-- Datenschutz Informationen -->
+                    <MudItem xs="12" Class="mt-6">
+                        <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-4">
+                            <MudIcon Icon="Icons.Material.Filled.Security" Class="mr-2" />
+                            Datenschutz & Nutzungsbedingungen
+                        </MudText>
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudField Label="AGB akzeptiert" Variant="Variant.Outlined">
+                            <MudChip T="bool" Color="@(User?.TermsAccepted == true ? Color.Success : Color.Warning)" 
+                                    Size="Size.Small">
+                                @(User?.TermsAccepted == true ? $"Ja, am {User.TermsAcceptedAt?.ToString("dd.MM.yyyy")}" : "Nein")
+                            </MudChip>
+                        </MudField>
+                    </MudItem>
+
+                    <MudItem xs="12" md="6">
+                        <MudField Label="Datenschutzerklärung akzeptiert" Variant="Variant.Outlined">
+                            <MudChip T="bool" Color="@(User?.PrivacyPolicyAccepted == true ? Color.Success : Color.Warning)" 
+                                    Size="Size.Small">
+                                @(User?.PrivacyPolicyAccepted == true ? $"Ja, am {User.PrivacyPolicyAcceptedAt?.ToString("dd.MM.yyyy")}" : "Nein")
+                            </MudChip>
+                        </MudField>
+                    </MudItem>
+
+                </MudGrid>
+
+                <MudDivider Class="my-6" />
+                
+                <MudStack Row="true" Spacing="4" Justify="Justify.SpaceBetween">
+                    <MudStack Row="true" Spacing="2">
+                        <MudButton ButtonType="ButtonType.Submit" 
+                                  Variant="Variant.Filled" 
+                                  Color="Color.Primary" 
+                                  StartIcon="Icons.Material.Filled.Save"
+                                  Disabled="_isSaving">
+                            @if (_isSaving)
+                            {
+                                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                                <MudText Class="ms-2">Speichern...</MudText>
+                            }
+                            else
+                            {
+                                <MudText>Speichern</MudText>
+                            }
+                        </MudButton>
+                        
+                        <MudButton Variant="Variant.Text" 
+                                  Color="Color.Secondary" 
+                                  StartIcon="Icons.Material.Filled.Cancel"
+                                  OnClick="Cancel">
+                            Abbrechen
+                        </MudButton>
+                    </MudStack>
+                    
+                    <MudButton Variant="Variant.Outlined" 
+                              Color="Color.Info" 
+                              StartIcon="Icons.Material.Filled.Visibility"
+                              Href="/user/profile/view">
+                        Ansicht wechseln
+                    </MudButton>
+                </MudStack>
+
+          
+        }
+    </MudPaper>
+    </MudContainer>
+@code{
+    public ApplicationUser? User { get; set; } = new();
+    public bool _isLoading { get; set; } = false;
+        public bool _isSaving { get; set; } = false;    
+        public void Cancel()
+        {
+            
+        }   
+    }
