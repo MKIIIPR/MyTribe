@@ -103,7 +103,7 @@
         public string? InstagramUrl { get; set; }
         public string? TikTokUrl { get; set; }
         public string? DiscordUrl { get; set; }
-        public ICollection<AffiliatePartner> PartnerUrl { get; set; }  // Enum f�r Partner-Links
+      
 
         // === �FFENTLICHE CREATOR SETTINGS ===
         public bool AcceptingCollaborations { get; set; } = false;
@@ -114,32 +114,9 @@
         // Navigation properties for related data
         public ICollection<CreatorToken> CreatorTokens { get; set; } = new List<CreatorToken>();
         public ICollection<Raffle> Raffles { get; set; } = new List<Raffle>();
+        public ICollection<AffiliatePartner> AffiliatePartners { get; set; } = new List<AffiliatePartner>();
+        public ICollection<CreatorPlacement> Placements { get; set; } = new List<CreatorPlacement>(); // Enum f�r Creator-Platzierungen
     }
-    public class AffiliatePartner
-    {
-        public string Id { get; set; }
-        public string PartneName { get; set; }
-        public string PartnerUrl { get; set; }
-        public string PartnerLogoUrl { get; set; }
-
-    }
-    // 4. FOLLOW SYSTEM
-    public class ProfileFollow
-    {
-        [Key]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
-
-        public string FollowerId { get; set; }
-        [ForeignKey(nameof(FollowerId))]
-        public TribeProfile Follower { get; set; }
-
-        public string CreatorProfileId { get; set; }
-        [ForeignKey(nameof(CreatorProfileId))]
-        public CreatorProfile Followed { get; set; }
-
-        public DateTime FollowedAt { get; set; } = DateTime.UtcNow;
-    }
-
     // 5. CREATOR TOKENS
     public class CreatorToken
     {
@@ -166,25 +143,48 @@
         [ForeignKey(nameof(CreatorProfileId))]
         public CreatorProfile Creator { get; set; }
     }
+    public class CreatorPlacement
+    {
+        [Key]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string? PlacementName { get; set; } // z.B. "Featured", "Sponsored", etc.
+        public string? PlacementUrl { get; set; } // URL zur Platzierung
+        public string? PlacementLogoUrl { get; set; } // Logo der Platzierung
+        public string? WebHookUrl { get; set; } // Webhook URL f�r Benachrichtigungen    
+        // === CREATOR CONNECTION ===
+        public string? CreatorProfileId { get; set; }
+        [ForeignKey(nameof(CreatorProfileId))]
+        public CreatorProfile Creator { get; set; }
+    }
+    public class AffiliatePartner
+    {
+        public string Id { get; set; }
+        public string PartneName { get; set; }
+        public string PartnerUrl { get; set; }
+        public string PartnerLogoUrl { get; set; }
+        [Required]
+        public string CreatorProfileId { get; set; }
 
-    // 6. TOKEN HOLDINGS
-    public class ProfileTokenHolding
+        [ForeignKey(nameof(CreatorProfileId))]
+        public CreatorProfile Creator { get; set; }
+
+    }
+    // 4. FOLLOW SYSTEM
+    public class ProfileFollow
     {
         [Key]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
-        public string ProfileId { get; set; }
-        [ForeignKey(nameof(ProfileId))]
-        public TribeProfile Profile { get; set; }
+        public string FollowerId { get; set; }
+        [ForeignKey(nameof(FollowerId))]
+        public TribeProfile Follower { get; set; }
 
-        public string CreatorTokenId { get; set; }
-        [ForeignKey(nameof(CreatorTokenId))]
-        public CreatorToken Token { get; set; }
+        public string CreatorProfileId { get; set; }
+        [ForeignKey(nameof(CreatorProfileId))]
+        public CreatorProfile Followed { get; set; }
 
-        public int Amount { get; set; } = 0;
-        public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+        public DateTime FollowedAt { get; set; } = DateTime.UtcNow;
     }
-
     // 7. RAFFLE SYSTEM - Erweitert f�r verschiedene Verlosungstypen
     public class Raffle
     {
@@ -224,6 +224,28 @@
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
+  
+   
+
+    // 6. TOKEN HOLDINGS
+    public class ProfileTokenHolding
+    {
+        [Key]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+
+        public string ProfileId { get; set; }
+        [ForeignKey(nameof(ProfileId))]
+        public TribeProfile Profile { get; set; }
+
+        public string CreatorTokenId { get; set; }
+        [ForeignKey(nameof(CreatorTokenId))]
+        public CreatorToken Token { get; set; }
+
+        public int Amount { get; set; } = 0;
+        public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+    }
+
+
 
     // 8. RAFFLE TOKEN REQUIREMENTS - Multiple Tokens pro Raffle m�glich
     public class RaffleTokenRequirement

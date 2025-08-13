@@ -6,6 +6,8 @@ using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Tribe.Client.Services;
+using Tribe.Services.ClientServices;
 
 namespace Tribe.Services
 {
@@ -18,8 +20,13 @@ namespace Tribe.Services
             {
                 client.BaseAddress = new Uri(baseAddress);
             });
-
-          
+            services.AddScoped<IClientApiService, ClientApiService>();
+            services.AddScoped<IAuthService, AuthService>();
+            
+            services.AddScoped<IApiService, ApiService>();
+            services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<ISignalRService, SignalRService>();
+            services.AddScoped<ITokenInitializationService, TokenInitializationService>();
 
             return services;
         }

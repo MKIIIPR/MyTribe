@@ -7,6 +7,8 @@
 @inject AuthenticationStateProvider AuthStateProvider
 
 <CascadingAuthenticationState>
+    <Tribe.Ui.States.CascadingTribeProfile>
+        <Child>
     <MudThemeProvider />
     <MudPopoverProvider />
     <MudDialogProvider />
@@ -51,6 +53,8 @@
             @Body
         </MudMainContent>
     </MudLayout>
+        </Child>
+    </Tribe.Ui.States.CascadingTribeProfile>
 </CascadingAuthenticationState>
 
 <div id="blazor-error-ui" data-nosnippet>

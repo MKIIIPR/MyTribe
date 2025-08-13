@@ -1,6 +1,4 @@
-﻿
-
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,22 +12,17 @@ using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Tribe.Services;
 
-namespace FrontUI
+namespace Tribe.Ui
 {
-    public static class ServicesConfiguration
+    public static class ServiceCollectionExtensions
     {
-        public static IServiceCollection AddUiServices(this IServiceCollection services, string baseAddress)
+        public static IServiceCollection AddTribeUiServices(this IServiceCollection services, string baseAddress)
         {
-            // 1. HttpClient für TribeAPI konfigurieren
-            services.AddHttpClient("TribeAPI", client =>
-            {
-                client.BaseAddress = new Uri(baseAddress);
-            });
 
-            // 2. Weitere UI-Services (z. B. MudBlazor)
             services.AddMudServices();
-
+            services.AddTribeServices(baseAddress);
             return services;
         }
     }

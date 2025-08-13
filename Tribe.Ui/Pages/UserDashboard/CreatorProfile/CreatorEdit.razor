@@ -1,0 +1,270 @@
+﻿@using MudBlazor
+@using Tribe.Client.Services
+@using System.ComponentModel.DataAnnotations
+@inject IClientApiService ClientApiService
+@inject ISnackbar Snackbar
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h5">Creator Profil bearbeiten</MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudButton Color="Color.Success" Variant="Variant.Filled" StartIcon="Icons.Material.Filled.Save" OnClick="SaveProfile" Disabled="isLoading">
+                @if (isLoading)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ms-2">Speichern...</MudText>
+                }
+                else
+                {
+                    <MudText>Speichern</MudText>
+                }
+            </MudButton>
+        </CardHeaderActions>
+    </MudCardHeader>
+
+    <MudCardContent>
+        <MudForm @ref="form" @bind-IsValid="@isValid" @bind-Errors="@errors">
+            <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+                
+                <!-- Allgemeine Informationen -->
+                <MudTabPanel Text="Allgemein" Icon="Icons.Material.Filled.Person">
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="editModel.CreatorName"
+                                        Label="Creator Name"
+                                        Required="true"
+                                        RequiredError="Creator Name ist erforderlich!"
+                                        MaxLength="100"
+                                        Counter="100"
+                                        Immediate="true" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="editModel.ImageTemplateUrl"
+                                        Label="Profilbild URL"
+                                        Placeholder="https://..."
+                                        Immediate="true" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="editModel.BannerUrl"
+                                        Label="Banner URL"
+                                        Placeholder="https://..."
+                                        Immediate="true" />
+                        </MudItem>
+
+                        <MudItem xs="12">
+                            <MudSwitch  T="bool" @bind-Checked="editModel.AcceptingCollaborations"
+                                     Label="Kollaborationen akzeptieren"
+                                     Color="Color.Success" />
+                        </MudItem>
+
+                        @if (editModel.AcceptingCollaborations)
+                        {
+                            <MudItem xs="12">
+                                <MudTextField @bind-Value="editModel.CollaborationInfo"
+                                            Label="Kollaborations-Info"
+                                            Lines="3"
+                                            Placeholder="Beschreibung für mögliche Kollaborationen..."
+                                            Immediate="true" />
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudTabPanel>
+
+                <!-- Social Media Links -->
+                <MudTabPanel Text="Social Media" Icon="Icons.Material.Filled.Share">
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="editModel.YouTubeUrl"
+                                        Label="YouTube URL"
+                                        Placeholder=""
+                                        Adornment="Adornment.Start"
+                                        AdornmentIcon="@Icons.Custom.Brands.YouTube"
+                                        AdornmentColor="Color.Error"
+                                        Immediate="true" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="editModel.TwitchUrl"
+                                        Label="Twitch URL"
+                                        Placeholder=""
+                                        Adornment="Adornment.Start"
+                                        AdornmentIcon="@Icons.Custom.Brands.Twitter"
+                                        AdornmentColor="Color.Secondary"
+                                        Immediate="true" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="editModel.TwitterUrl"
+                                        Label="Twitter URL"
+                                        Placeholder="https://twitter.com/username"
+                                        Adornment="Adornment.Start"
+                                        AdornmentIcon="@Icons.Custom.Brands.Twitter"
+                                        AdornmentColor="Color.Info"
+                                        Immediate="true" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="editModel.InstagramUrl"
+                                        Label="Instagram URL"
+                                        Placeholder="https://instagram.com/username"
+                                        Adornment="Adornment.Start"
+                                        AdornmentIcon="@Icons.Custom.Brands.Instagram"
+                                        AdornmentColor="Color.Warning"
+                                        Immediate="true" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="editModel.TikTokUrl"
+                                        Label="TikTok URL"
+                                        Placeholder=""
+                                        Adornment="Adornment.Start"
+                                        AdornmentIcon="@Icons.Material.Filled.MusicNote"
+                                        AdornmentColor="Color.Dark"
+                                        Immediate="true" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="editModel.DiscordUrl"
+                                        Label="Discord URL"
+                                        Placeholder="https://discord.gg/serverid"
+                                        Adornment="Adornment.Start"
+                                        AdornmentIcon="@Icons.Custom.Brands.Discord"
+                                        AdornmentColor="Color.Primary"
+                                        Immediate="true" />
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="editModel.PatreonUrl"
+                                        Label="Patreon URL"
+                                        Placeholder="https://patreon.com/username"
+                                        Adornment="Adornment.Start"
+                                        AdornmentIcon="@Icons.Material.Filled.Favorite"
+                                        AdornmentColor="Color.Tertiary"
+                                        Immediate="true" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <!-- Tokens -->
+                <MudTabPanel Text="Tokens" Icon="Icons.Material.Filled.Token">
+                    <CascadingValue Value="editModel">
+                        <CreatorTokensEdit />
+                    </CascadingValue>
+                </MudTabPanel>
+
+                <!-- Affiliate Partner -->
+                <MudTabPanel Text="Partner" Icon="Icons.Material.Filled.Handshake">
+                    <CascadingValue Value="editModel">
+                        <AffiliatePartnersEdit />
+                    </CascadingValue>
+                </MudTabPanel>
+
+                <!-- Placements -->
+                <MudTabPanel Text="Platzierungen" Icon="Icons.Material.Filled.Place">
+                    <CascadingValue Value="editModel">
+                        <CreatorPlacementsEdit />
+                    </CascadingValue>
+                </MudTabPanel>
+
+                <!-- Raffles -->
+                <MudTabPanel Text="Raffles" Icon="Icons.Material.Filled.Casino">
+                    <CascadingValue Value="editModel">
+                        <RafflesEdit />
+                    </CascadingValue>
+                </MudTabPanel>
+            </MudTabs>
+        </MudForm>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public CreatorProfile? CreatorProfile { get; set; }
+    [Parameter] public EventCallback<CreatorProfile> OnProfileUpdated { get; set; }
+
+    private MudForm form = null!;
+    private bool isValid;
+    private string[] errors = { };
+    private bool isLoading = false;
+    
+    private CreatorProfile editModel = new();
+
+    protected override void OnParametersSet()
+    {
+        if (CreatorProfile != null)
+        {
+            // Deep copy für Bearbeitung
+            editModel = new CreatorProfile
+            {
+                Id = CreatorProfile.Id,
+                CreatorName = CreatorProfile.CreatorName,
+                ImageTemplateUrl = CreatorProfile.ImageTemplateUrl,
+                BannerUrl = CreatorProfile.BannerUrl,
+                FollowerCount = CreatorProfile.FollowerCount,
+                TotalRaffles = CreatorProfile.TotalRaffles,
+                TotalTokensDistributed = CreatorProfile.TotalTokensDistributed,
+                PatreonUrl = CreatorProfile.PatreonUrl,
+                YouTubeUrl = CreatorProfile.YouTubeUrl,
+                TwitchUrl = CreatorProfile.TwitchUrl,
+                TwitterUrl = CreatorProfile.TwitterUrl,
+                InstagramUrl = CreatorProfile.InstagramUrl,
+                TikTokUrl = CreatorProfile.TikTokUrl,
+                DiscordUrl = CreatorProfile.DiscordUrl,
+                AcceptingCollaborations = CreatorProfile.AcceptingCollaborations,
+                CollaborationInfo = CreatorProfile.CollaborationInfo,
+                VerifiedCreator = CreatorProfile.VerifiedCreator,
+                VerifiedAt = CreatorProfile.VerifiedAt,
+                CreatorTokens = new List<CreatorToken>(CreatorProfile.CreatorTokens),
+                AffiliatePartners = new List<AffiliatePartner>(CreatorProfile.AffiliatePartners),
+                Placements = new List<CreatorPlacement>(CreatorProfile.Placements),
+                Raffles = new List<Raffle>(CreatorProfile.Raffles)
+            };
+        }
+        else
+        {
+            editModel = new CreatorProfile();
+        }
+    }
+
+    private async Task SaveProfile()
+    {
+        await form.Validate();
+        if (!isValid) return;
+
+        isLoading = true;
+        try
+        {
+            CreatorProfile? result;
+            
+            if (string.IsNullOrEmpty(editModel.Id))
+            {
+                // Neues Profil erstellen
+                editModel.Id = Guid.NewGuid().ToString();
+                result = await ClientApiService.CreateAsync("api/creatorprofile", editModel);
+                Snackbar.Add("Creator Profil wurde erfolgreich erstellt!", Severity.Success);
+            }
+            else
+            {
+                // Bestehendes Profil aktualisieren
+                result = await ClientApiService.UpdateAsync("api/creatorprofile", editModel.Id, editModel);
+                Snackbar.Add("Creator Profil wurde erfolgreich aktualisiert!", Severity.Success);
+            }
+
+            if (result != null)
+            {
+                await OnProfileUpdated.InvokeAsync(result);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler beim Speichern: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

@@ -1,8 +1,9 @@
 ﻿
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using MudBlazor
 @using System.ComponentModel.DataAnnotations
-
+@inject AuthenticationStateProvider AuthStateProvider
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8 mb-8">
     <MudPaper Elevation="2" Class="pa-6">
         <MudText Typo="Typo.h4" GutterBottom="true" Class="mb-6">

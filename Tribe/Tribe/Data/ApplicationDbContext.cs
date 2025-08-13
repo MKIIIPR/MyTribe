@@ -1,6 +1,7 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
+using System.Reflection.Emit;
 using Tribe.Bib.Models.TribeRelated;
 
 namespace Tribe.Data
@@ -34,6 +35,11 @@ namespace Tribe.Data
             builder.Entity<IdentityUserToken<string>>().ToTable("UserTokens");
             builder.Entity<IdentityRoleClaim<string>>().ToTable("RoleClaims");
 
+            builder.Entity<TribeProfile>()
+          .ToTable("TribeProfiles");
+
+            builder.Entity<CreatorProfile>()
+                .ToTable("CreatorProfiles");
             // === PROFILE KONFIGURATION ===
             builder.Entity<TribeProfile>(entity =>
             {

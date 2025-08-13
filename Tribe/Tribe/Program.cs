@@ -17,15 +17,18 @@ using Tribe.Services;
 using Tribe.Services.ClientServices;
 using Tribe.Services.Hubs;
 using Tribe.Services.ServerServices;
+using Tribe.Services.States;
 
 var builder = WebApplication.CreateBuilder(args);
 
 #region ClientNonsense
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IApiService, ApiService>();
-
+builder.Services.AddScoped<IClientApiService, ClientApiService>();
 builder.Services.AddScoped<ISignalRService, SignalRService>();
 builder.Services.AddScoped<ITokenInitializationService, TokenInitializationService>();
+builder.Services.AddScoped<TribeProfileState>();
+
 builder.Services.AddHttpClient();
 #endregion
 

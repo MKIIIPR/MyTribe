@@ -1,0 +1,354 @@
+﻿@using Microsoft.AspNetCore.Components.WebAssembly.Services
+@using System.Reflection
+@inject IJSRuntime JSRuntime
+
+<MudCard Class="ma-2" Style="max-width: 500px;">
+    <MudCardHeader>
+        <CardHeaderContent>
+
+        </CardHeaderContent>
+    </MudCardHeader>
+
+    <MudCardContent>
+        <MudGrid>
+            <!-- Primary Mode Display -->
+            <MudItem xs="12">
+                <MudAlert Severity="@GetModeSeverity()" Variant="Variant.Filled" Class="mb-3">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <strong style="font-size: 1.1em;">@GetCurrentMode()</strong>
+                    </div>
+                </MudAlert>
+            </MudItem>
+
+            <!-- Detailed Information -->
+            <MudItem xs="6">
+                <MudPaper Class="pa-3" Elevation="1">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">
+                        <MudIcon Icon="Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                        Runtime Info
+                    </MudText>
+                    <MudText Typo="Typo.body2">
+                        <strong>Assembly:</strong><br />
+                        <span class="mud-text-secondary" style="font-size: 0.8em; word-break: break-all;">
+                            @assemblyLocation
+                        </span>
+                    </MudText>
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.body2">
+                        <strong>Environment:</strong> @environmentName<br />
+                        <strong>Framework:</strong> @frameworkVersion
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="6">
+                <MudPaper Class="pa-3" Elevation="1">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">
+                        <MudIcon Icon="Icons.Material.Filled.Speed" Size="Size.Small" Class="mr-1" />
+                        Performance
+                    </MudText>
+                    <MudText Typo="Typo.body2">
+                        <strong>Render Time:</strong> @renderTime ms<br />
+                        <strong>JS Interop:</strong> @jsInteropTime ms<br />
+                        <strong>Total Time:</strong> @totalTime ms
+                    </MudText>
+                    <MudProgressLinear Value="@GetPerformanceScore()" Color="@GetPerformanceColor()" Class="mt-2" />
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                        Performance Score: @GetPerformanceScore().ToString("F1")%
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Feature Comparison -->
+            <MudItem xs="12">
+                <MudExpansionPanels>
+                    <MudExpansionPanel Text="Feature Comparison" Icon="@Icons.Material.Filled.Compare">
+                        <MudSimpleTable Elevation="0" Dense="true">
+                            <thead>
+                                <tr>
+                                    <th>Feature</th>
+                                    <th style="text-align: center;">Server-Side</th>
+                                    <th style="text-align: center;">WebAssembly</th>
+                                    <th style="text-align: center;">Current</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var feature in GetFeatureComparison())
+                                {
+                                    <tr>
+                                        <td><strong>@feature.Name</strong></td>
+                                        <td style="text-align: center;">
+                                            <MudIcon Icon="@(feature.ServerSide? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                                                     Color="@(feature.ServerSide ? Color.Success : Color.Error)" Size="Size.Small" />
+                                        </td>
+                                        <td style="text-align: center;">
+                                            <MudIcon Icon="@(feature.WebAssembly? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                                                     Color="@(feature.WebAssembly ? Color.Success : Color.Error)" Size="Size.Small" />
+                                        </td>
+                                        <td style="text-align: center;">
+                                            <MudIcon Icon="@(feature.CurrentSupported? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                                                     Color="@(feature.CurrentSupported ? Color.Success : Color.Error)" Size="Size.Small" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+            </MudItem>
+
+            <!-- Debug Information -->
+            <MudItem xs="12">
+                <MudExpansionPanels>
+                    <MudExpansionPanel Text="Debug Information" Icon="@Icons.Material.Filled.BugReport">
+                        <MudPaper Class="pa-3" Elevation="0" Style="background-color: #f5f5f5; font-family: monospace; font-size: 0.8em;">
+                            <div>
+                                <strong>Detection Results:</strong><br />
+                                • IsWebAssembly: @isWebAssembly<br />
+                                • IsServerSide: @isServerSide<br />
+                                • IsPrerendered: @isPrerendered<br />
+                                • HasJSRuntime: @hasJSRuntime<br />
+                                • SupportsCircuitHandler: @supportsCircuitHandler<br />
+                                • Browser UserAgent: @userAgent<br />
+                                • Component Instance: @GetHashCode()<br />
+                                • Render Count: @renderCount<br />
+                                • Last Update: @DateTime.Now.ToString("HH:mm:ss.fff")
+                            </div>
+                        </MudPaper>
+                    </MudExpansionPanel>
+                </MudExpansionPanels>
+            </MudItem>
+        </MudGrid>
+    </MudCardContent>
+
+    <MudCardActions>
+        <MudButton StartIcon="@Icons.Material.Filled.Refresh" OnClick="RefreshInfo" Size="Size.Small">
+            Refresh Info
+        </MudButton>
+        <MudButton StartIcon="@Icons.Material.Filled.Speed" OnClick="RunPerformanceTest" Size="Size.Small">
+            Performance Test
+        </MudButton>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    private bool isWebAssembly = false;
+    private bool isServerSide = false;
+    private bool isPrerendered = false;
+    private bool hasJSRuntime = false;
+    private bool supportsCircuitHandler = false;
+    private string assemblyLocation = "";
+    private string environmentName = "";
+    private string frameworkVersion = "";
+    private string userAgent = "";
+    private double renderTime = 0;
+    private double jsInteropTime = 0;
+    private double totalTime = 0;
+    private int renderCount = 0;
+
+    private System.Diagnostics.Stopwatch? stopwatch;
+
+    protected override async Task OnInitializedAsync()
+    {
+        stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        await DetectBlazorMode();
+        await GetEnvironmentInfo();
+        stopwatch.Stop();
+        renderTime = stopwatch.Elapsed.TotalMilliseconds;
+        totalTime = renderTime + jsInteropTime;
+        renderCount++;
+    }
+
+    private async Task DetectBlazorMode()
+    {
+        var jsStopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        try
+        {
+            // Test 1: Check for WebAssembly specific services
+            var serviceProvider = (IServiceProvider?)JSRuntime.GetType()
+                .GetProperty("ServiceProvider", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(JSRuntime);
+
+            // Test 2: Try to get WebAssembly-specific service
+            try
+            {
+                var wasmService = serviceProvider?.GetService<LazyAssemblyLoader>();
+                isWebAssembly = wasmService != null;
+            }
+            catch
+            {
+                isWebAssembly = false;
+            }
+
+            // Test 3: Check assembly location
+            var assembly = Assembly.GetExecutingAssembly();
+            assemblyLocation = assembly.Location;
+            isWebAssembly = isWebAssembly || string.IsNullOrEmpty(assemblyLocation) || assemblyLocation.Contains("_framework");
+
+            // Test 4: Check for server-side indicators
+            isServerSide = !isWebAssembly;
+
+            // Test 5: Try JavaScript interop (this helps detect prerendering)
+            hasJSRuntime = JSRuntime != null;
+            if (hasJSRuntime)
+            {
+                try
+                {
+                    userAgent = await JSRuntime.InvokeAsync<string>("eval", "navigator.userAgent");
+                    jsStopwatch.Stop();
+                    jsInteropTime = jsStopwatch.Elapsed.TotalMilliseconds;
+                }
+                catch
+                {
+                    isPrerendered = true;
+                    jsInteropTime = 0;
+                }
+            }
+
+            // Test 6: Check for Circuit Handler support (Server-side specific)
+            try
+            {
+                var circuitHandlerType = Type.GetType("Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler, Microsoft.AspNetCore.Components.Server");
+                supportsCircuitHandler = circuitHandlerType != null;
+            }
+            catch
+            {
+                supportsCircuitHandler = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Fallback detection
+            assemblyLocation = $"Error: {ex.Message}";
+            isServerSide = true;
+            isWebAssembly = false;
+        }
+    }
+
+    private async Task GetEnvironmentInfo()
+    {
+        try
+        {
+            environmentName = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Unknown";
+            frameworkVersion = Environment.Version.ToString();
+        }
+        catch
+        {
+            environmentName = "Unknown";
+            frameworkVersion = "Unknown";
+        }
+    }
+
+    private string GetCurrentMode()
+    {
+        if (isPrerendered) return "🔄 Server-Side (Prerendered)";
+        if (isWebAssembly) return "🌐 WebAssembly (Client-Side)";
+        if (isServerSide) return "🖥️ Server-Side (Interactive)";
+        return "❓ Unknown Mode";
+    }
+
+    private string GetModeIcon()
+    {
+        if (isPrerendered) return Icons.Material.Filled.Refresh;
+        if (isWebAssembly) return Icons.Material.Filled.Language;
+        if (isServerSide) return Icons.Material.Filled.Computer;
+        return Icons.Material.Filled.Help;
+    }
+
+    private Color GetModeColor()
+    {
+        if (isPrerendered) return Color.Info;
+        if (isWebAssembly) return Color.Primary;
+        if (isServerSide) return Color.Success;
+        return Color.Warning;
+    }
+
+    private Severity GetModeSeverity()
+    {
+        if (isPrerendered) return Severity.Info;
+        if (isWebAssembly) return Severity.Normal;
+        if (isServerSide) return Severity.Success;
+        return Severity.Warning;
+    }
+
+    private double GetPerformanceScore()
+    {
+        if (totalTime == 0) return 100;
+        // Lower time = better score (inverted scale)
+        var score = Math.Max(0, 100 - (totalTime / 10)); // 10ms = 90% score
+        return Math.Min(100, score);
+    }
+
+    private Color GetPerformanceColor()
+    {
+        var score = GetPerformanceScore();
+        if (score >= 80) return Color.Success;
+        if (score >= 60) return Color.Warning;
+        return Color.Error;
+    }
+
+    public class FeatureComparison
+    {
+        public string Name { get; set; } = "";
+        public bool ServerSide { get; set; }
+        public bool WebAssembly { get; set; }
+        public bool CurrentSupported { get; set; }
+    }
+
+    private List<FeatureComparison> GetFeatureComparison()
+    {
+        return new List<FeatureComparison>
+        {
+            new() { Name = "Instant Loading", ServerSide = true, WebAssembly = false, CurrentSupported = isServerSide },
+            new() { Name = "Offline Support", ServerSide = false, WebAssembly = true, CurrentSupported = isWebAssembly },
+            new() { Name = "File System Access", ServerSide = true, WebAssembly = false, CurrentSupported = isServerSide },
+            new() { Name = "Direct DB Access", ServerSide = true, WebAssembly = false, CurrentSupported = isServerSide },
+            new() { Name = "Client-Side Caching", ServerSide = false, WebAssembly = true, CurrentSupported = isWebAssembly },
+            new() { Name = "Real-time Updates", ServerSide = true, WebAssembly = false, CurrentSupported = isServerSide },
+            new() { Name = "Reduced Server Load", ServerSide = false, WebAssembly = true, CurrentSupported = isWebAssembly },
+            new() { Name = "SEO Friendly", ServerSide = true, WebAssembly = false, CurrentSupported = isServerSide }
+        };
+    }
+
+    private async Task RefreshInfo()
+    {
+        renderCount++;
+        stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        await DetectBlazorMode();
+        await GetEnvironmentInfo();
+
+        stopwatch.Stop();
+        renderTime = stopwatch.Elapsed.TotalMilliseconds;
+        totalTime = renderTime + jsInteropTime;
+
+        StateHasChanged();
+    }
+
+    private async Task RunPerformanceTest()
+    {
+        var testStopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        // Perform some operations to test performance
+        for (int i = 0; i < 1000; i++)
+        {
+            var dummy = DateTime.Now.ToString();
+        }
+
+        if (hasJSRuntime && !isPrerendered)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("console.log", "Performance test completed");
+            }
+            catch { }
+        }
+
+        testStopwatch.Stop();
+
+        renderTime = testStopwatch.Elapsed.TotalMilliseconds;
+        totalTime = renderTime + jsInteropTime;
+
+        StateHasChanged();
+    }
+}

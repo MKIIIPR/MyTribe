@@ -3,7 +3,8 @@ using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor.Services;
 using Tribe.Client.Services;
 using Tribe.Services.ClientServices;
-
+using Tribe.Services.States;
+using Tribe.Ui;
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 builder.Services.AddMudServices();
@@ -15,9 +16,8 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IAuthService, AuthService>();
-// Custom Services
-builder.Services.AddScoped<IApiService, ApiService>();
+builder.Services.AddTribeUiServices(builder.HostEnvironment.BaseAddress);
+builder.Services.AddSingleton<TribeProfileState>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ISignalRService, SignalRService>();
 builder.Services.AddScoped<ITokenInitializationService, TokenInitializationService>();

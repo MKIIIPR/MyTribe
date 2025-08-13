@@ -1,0 +1,180 @@
+﻿@using MudBlazor
+
+@using Tribe.Client.Services
+@inject IClientApiService ClientApiService
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                @if (!string.IsNullOrEmpty(CreatorProfile?.BannerUrl))
+                {
+                    <MudAvatar Size="Size.Large" Image="@CreatorProfile.BannerUrl" />
+                }
+                else
+                {
+                    <MudAvatar Size="Size.Large" Color="Color.Primary">
+                        @(CreatorProfile?.CreatorName?.FirstOrDefault().ToString().ToUpper() ?? "C")
+                    </MudAvatar>
+                }
+                <div>
+                    <MudText Typo="Typo.h5">@(CreatorProfile?.CreatorName ?? "Unbenannter Creator")</MudText>
+                    @if (CreatorProfile?.VerifiedCreator == true)
+                    {
+                        <MudChip T="bool"   Size="Size.Small" Color="Color.Success" Icon="Icons.Material.Filled.Verified">
+                            Verifiziert @(CreatorProfile.VerifiedAt?.ToString("dd.MM.yyyy"))
+                        </MudChip>
+                    }
+                </div>
+            </div>
+        </CardHeaderContent>
+    </MudCardHeader>
+
+    <MudCardContent>
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+            
+            <!-- Allgemeine Informationen -->
+            <MudTabPanel Text="Allgemein" Icon="Icons.Material.Filled.Person">
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.subtitle1" Class="mb-2">Creator Informationen</MudText>
+                        <MudText><strong>Name:</strong> @(CreatorProfile?.CreatorName ?? "Nicht angegeben")</MudText>
+                        <MudText><strong>Follower:</strong> @(CreatorProfile?.FollowerCount ?? 0)</MudText>
+                        <MudText><strong>Raffles:</strong> @(CreatorProfile?.TotalRaffles ?? 0)</MudText>
+                        <MudText><strong>Tokens verteilt:</strong> @(CreatorProfile?.TotalTokensDistributed ?? 0)</MudText>
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.subtitle1" Class="mb-2">Kollaborationen</MudText>
+                        <MudText>
+                            <strong>Status:</strong> 
+                            @if (CreatorProfile?.AcceptingCollaborations == true)
+                            {
+                                <MudChip T="bool" Size="Size.Small" Color="Color.Success">Akzeptiert</MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="bool" Size="Size.Small" Color="Color.Default">Nicht aktiv</MudChip>
+                            }
+                        </MudText>
+                        @if (!string.IsNullOrEmpty(CreatorProfile?.CollaborationInfo))
+                        {
+                            <MudText Class="mt-2"><strong>Info:</strong> @CreatorProfile.CollaborationInfo</MudText>
+                        }
+                    </MudItem>
+                </MudGrid>
+            </MudTabPanel>
+
+            <!-- Social Media Links -->
+            <MudTabPanel Text="Social Media" Icon="Icons.Material.Filled.Share">
+                <MudGrid>
+                    @if (!string.IsNullOrEmpty(CreatorProfile?.YouTubeUrl))
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudButton Href="@CreatorProfile.YouTubeUrl" Target="_blank" StartIcon="@Icons.Custom.Brands.YouTube" Color="Color.Error" Variant="Variant.Outlined">
+                                YouTube
+                            </MudButton>
+                        </MudItem>
+                    }
+                    @if (!string.IsNullOrEmpty(CreatorProfile?.TwitchUrl))
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudButton Href="@CreatorProfile.TwitchUrl" Target="_blank" StartIcon="@Icons.Custom.Brands.YouTube" Color="Color.Secondary" Variant="Variant.Outlined">
+                                Twitch
+                            </MudButton>
+                        </MudItem>
+                    }
+                    @if (!string.IsNullOrEmpty(CreatorProfile?.TwitterUrl))
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudButton Href="@CreatorProfile.TwitterUrl" Target="_blank" StartIcon="@Icons.Custom.Brands.Twitter" Color="Color.Info" Variant="Variant.Outlined">
+                                Twitter
+                            </MudButton>
+                        </MudItem>
+                    }
+                    @if (!string.IsNullOrEmpty(CreatorProfile?.InstagramUrl))
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudButton Href="@CreatorProfile.InstagramUrl" Target="_blank" StartIcon="@Icons.Custom.Brands.Instagram" Color="Color.Warning" Variant="Variant.Outlined">
+                                Instagram
+                            </MudButton>
+                        </MudItem>
+                    }
+                    @if (!string.IsNullOrEmpty(CreatorProfile?.TikTokUrl))
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudButton Href="@CreatorProfile.TikTokUrl" Target="_blank" StartIcon="@Icons.Material.Filled.MusicNote" Color="Color.Dark" Variant="Variant.Outlined">
+                                TikTok
+                            </MudButton>
+                        </MudItem>
+                    }
+                    @if (!string.IsNullOrEmpty(CreatorProfile?.DiscordUrl))
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudButton Href="@CreatorProfile.DiscordUrl" Target="_blank" StartIcon="@Icons.Custom.Brands.Discord" Color="Color.Primary" Variant="Variant.Outlined">
+                                Discord
+                            </MudButton>
+                        </MudItem>
+                    }
+                    @if (!string.IsNullOrEmpty(CreatorProfile?.PatreonUrl))
+                    {
+                        <MudItem xs="12" md="6">
+                            <MudButton Href="@CreatorProfile.PatreonUrl" Target="_blank" StartIcon="@Icons.Material.Filled.Favorite" Color="Color.Tertiary" Variant="Variant.Outlined">
+                                Patreon
+                            </MudButton>
+                        </MudItem>
+                    }
+                </MudGrid>
+                
+                @if (string.IsNullOrEmpty(CreatorProfile?.YouTubeUrl) && string.IsNullOrEmpty(CreatorProfile?.TwitchUrl) && 
+                     string.IsNullOrEmpty(CreatorProfile?.TwitterUrl) && string.IsNullOrEmpty(CreatorProfile?.InstagramUrl) &&
+                     string.IsNullOrEmpty(CreatorProfile?.TikTokUrl) && string.IsNullOrEmpty(CreatorProfile?.DiscordUrl) &&
+                     string.IsNullOrEmpty(CreatorProfile?.PatreonUrl))
+                {
+                    <MudAlert Severity="Severity.Info">Keine Social Media Links hinterlegt.</MudAlert>
+                }
+            </MudTabPanel>
+
+            <!-- Tokens -->
+            <MudTabPanel Text="Tokens" Icon="Icons.Material.Filled.Token">
+                <CascadingValue Value="CreatorProfile">
+                    <CreatorTokensDisplay />
+                </CascadingValue>
+            </MudTabPanel>
+
+            <!-- Affiliate Partner -->
+            <MudTabPanel Text="Partner" Icon="Icons.Material.Filled.Handshake">
+                <CascadingValue Value="CreatorProfile">
+                    <AffiliatePartnersDisplay />
+                </CascadingValue>
+            </MudTabPanel>
+
+            <!-- Placements -->
+            <MudTabPanel Text="Platzierungen" Icon="Icons.Material.Filled.Place">
+                <CascadingValue Value="CreatorProfile">
+                    <CreatorPlacementsDisplay />
+                </CascadingValue>
+            </MudTabPanel>
+
+            <!-- Raffles -->
+            <MudTabPanel Text="Raffles" Icon="Icons.Material.Filled.Casino">
+                <CascadingValue Value="CreatorProfile">
+                    <RafflesDisplay />
+                </CascadingValue>
+            </MudTabPanel>
+        </MudTabs>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public CreatorProfile? CreatorProfile { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Hier könnte bei Bedarf das CreatorProfile neu geladen werden
+        if (CreatorProfile != null && string.IsNullOrEmpty(CreatorProfile.Id))
+        {
+            // Optional: Profile aus API laden wenn nur ID übergeben wurde
+        }
+    }
+}

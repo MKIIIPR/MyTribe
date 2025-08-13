@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Routing
 @using MudBlazor
+@using Tribe.Services.States
 @using static MudBlazor.CategoryTypes
 @inject IDialogService Dialog
  @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -13,7 +14,7 @@
 <MudSnackbarProvider />
 <MudDialogProvider />
 <CascadingAuthenticationState>
-
+    <Tribe.Ui.States.CascadingTribeProfile>
         <MudLayout>
             <MudAppBar>
 
@@ -56,7 +57,7 @@
 
             </div>
         </MudLayout>
-   
+    </Tribe.Ui.States.CascadingTribeProfile>
 </CascadingAuthenticationState>
 @code {
     private void OpenDialogAsync()
