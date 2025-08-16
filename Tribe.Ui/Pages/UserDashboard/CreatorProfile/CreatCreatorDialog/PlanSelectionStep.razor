@@ -1,0 +1,238 @@
+﻿@using MudBlazor
+@using System.Text.Json
+
+<MudItem Style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+    <MudSelect T="string" ValueChanged="DurationChanged" Label="Billing Cycle" Variant="Variant.Outlined" Class="mb-4" Style="min-width:200px;">
+        @foreach (var duration in AvailableDurations)
+        {
+            <MudSelectItem  Value="@duration">@duration</MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudButtonGroup Color="Color.Primary" Variant="Variant.Text">
+        @foreach (var currency in AvailableCurrencies)
+        {
+            <MudButton OnClick="@(() => OnCurrencySelected(currency))"
+                       Variant="@(SelectedSubscription.Currency == currency ? Variant.Filled : Variant.Outlined)">
+                @currency
+            </MudButton>
+        }
+    </MudButtonGroup>
+</MudItem>
+
+@if (IsLoading)
+{
+    <div class="d-flex justify-center">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    </div>
+}
+else if (CreatorPlans?.Any() == true)
+{
+    <MudGrid>
+        @foreach (var plan in CreatorPlans.Where(p => p.Aktiv))
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudCard Elevation="@(SelectedSubscription.CreatorPlanId == plan.Guid ? 15 : 5)"
+                         Class="@GetCardClass(plan)"
+                         Style="@GetCardStyle(plan)"
+                         OnClick="() => SelectPlan(plan)">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h5" Align="Align.Center">@plan.Name</MudText>
+                            @if (IsPopularPlan(plan))
+                            {
+                                <MudChip T="bool" Color="Color.Primary" Size="Size.Small" Class="ma-1">Most Popular</MudChip>
+                            }
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <div class="d-flex justify-center align-center">
+                            @{
+                                var selectedPricing = GetPricingForDurationAndCurrency(plan, SelectedSubscription.Duration);
+                            }
+                            @if (selectedPricing != null)
+                            {
+                                <MudText Typo="Typo.h3">@GetFormattedPrice(selectedPricing, SelectedSubscription.Currency)</MudText>
+                                <MudText Typo="Typo.h6" Class="ml-1 mt-2" Color="Color.Secondary">/@SelectedSubscription.Duration</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.h4" Color="Color.Secondary">Contact Us</MudText>
+                            }
+                        </div>
+
+                        <MudText Typo="Typo.body2" Align="Align.Center" Class="mt-2 mb-4" Color="Color.Secondary">
+                            @($"{plan.TokenMenge:N0} Tokens included")
+                        </MudText>
+                        <MudList T="string" Class="mx-auto" Style="width:100%; max-width:300px;">
+                            <MudListItem Icon="@GetFeatureIcon(plan.CanUploadDigitalContent)">
+                                <MudText Class="@GetFeatureTextClass(plan.CanUploadDigitalContent)">Digital Content Upload</MudText>
+                            </MudListItem>
+                            <MudListItem Icon="@GetFeatureIcon(plan.HaveShopItems)">
+                                <MudText Class="@GetFeatureTextClass(plan.HaveShopItems)">Shop Items</MudText>
+                            </MudListItem>
+                            <MudListItem Icon="@GetFeatureIcon(plan.CanCreateEvents)">
+                                <MudText Class="@GetFeatureTextClass(plan.CanCreateEvents)">Create Events</MudText>
+                            </MudListItem>
+                            <MudListItem Icon="@GetFeatureIcon(plan.CanCreateRaffles)">
+                                <MudText Class="@GetFeatureTextClass(plan.CanCreateRaffles)">Create Raffles</MudText>
+                            </MudListItem>
+                            <MudListItem Icon="@GetFeatureIcon(plan.CanUseWindowsApp)">
+                                <MudText Class="@GetFeatureTextClass(plan.CanUseWindowsApp)">Windows App Access</MudText>
+                            </MudListItem>
+                        </MudList>
+                    </MudCardContent>
+                    <MudCardActions Class="d-flex justify-center pb-4">
+                        <MudButton Variant="@GetButtonVariant(plan)"
+                                   Color="@GetButtonColor(plan)"
+                                   Size="Size.Large"
+                                   Style="width:80%;"
+                                   OnClick="@(()=>SelectPlan(plan))">
+                            @GetButtonText(plan)
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+else
+{
+    <MudAlert Severity="Severity.Warning">No creator plans available at the moment.</MudAlert>
+}
+
+@code {
+    [Parameter] public List<CreatorPlan>? CreatorPlans { get; set; }
+    [Parameter] public CreatorSubscription SelectedSubscription { get; set; } = new();
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback<CreatorSubscription> SelectedSubscriptionChanged { get; set; }
+    // EventCallbacks zur Benachrichtigung der übergeordneten Komponente
+    [Parameter] public EventCallback OnSelectionChanged { get; set; }
+
+    private List<string> AvailableDurations = new();
+    private List<string> AvailableCurrencies = new();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        UpdateAvailableSelections();
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        UpdateAvailableSelections();
+        // Stellt sicher, dass die Standardauswahl gültig ist
+        if (!AvailableDurations.Contains(SelectedSubscription.Duration) && AvailableDurations.Any())
+        {
+            SelectedSubscription.Duration = AvailableDurations.First();
+        }
+        if (!AvailableCurrencies.Contains(SelectedSubscription.Currency) && AvailableCurrencies.Any())
+        {
+            SelectedSubscription.Currency = AvailableCurrencies.First();
+        }
+    }
+
+    private void UpdateAvailableSelections()
+    {
+        if (CreatorPlans == null || !CreatorPlans.Any())
+        {
+            AvailableDurations = new();
+            AvailableCurrencies = new();
+            return;
+        }
+
+        // Sammelt alle einzigartigen Durations von allen Plänen
+        AvailableDurations = CreatorPlans
+            .Where(p => p.PricingList != null)
+            .SelectMany(p => p.PricingList)
+            .Select(p => p.Duration)
+            .Distinct()
+            .ToList();
+
+        // Sammelt alle Währungen (hier fix definiert, kann aber auch dynamisch sein)
+        AvailableCurrencies = new List<string> { "USD", "EUR", "GBP" };
+    }
+    private async Task DurationChanged(string duration)
+    {
+        SelectedSubscription.Duration = duration;
+        await SelectedSubscriptionChanged.InvokeAsync(SelectedSubscription);
+    }
+    private async Task SelectPlan(CreatorPlan plan)
+    {
+        SelectedSubscription.CreatorPlanId = plan.Guid;
+        SelectedSubscription.CreatorPlan = plan; // Füllt die Navigation-Property
+        await UpdatePricingInSubscription(plan);
+        await OnSelectionChanged.InvokeAsync();
+        await SelectedSubscriptionChanged.InvokeAsync(SelectedSubscription);
+
+    }
+
+    private async Task OnCurrencySelected(string currency)
+    {
+        SelectedSubscription.Currency = currency;
+        // Aktualisiert das Pricing, falls ein Plan bereits ausgewählt ist
+        if (SelectedSubscription.CreatorPlan != null)
+        {
+            await UpdatePricingInSubscription(SelectedSubscription.CreatorPlan);
+        }
+        await OnSelectionChanged.InvokeAsync();
+        await SelectedSubscriptionChanged.InvokeAsync(SelectedSubscription);
+
+    }
+
+    private async Task UpdatePricingInSubscription(CreatorPlan plan)
+    {
+        var pricing = GetPricingForDurationAndCurrency(plan, SelectedSubscription.Duration);
+        SelectedSubscription.CreatorPlanPricingId = pricing?.Guid ?? string.Empty;
+        SelectedSubscription.CreatorPlanPricing = pricing; // Füllt die Navigation-Property
+        await SelectedSubscriptionChanged.InvokeAsync(SelectedSubscription);
+
+    }
+
+    private CreatorPlanPricing? GetPricingForDurationAndCurrency(CreatorPlan plan, string duration)
+    {
+        return plan.PricingList?.FirstOrDefault(p => p.Duration == duration);
+    }
+
+    private string GetFormattedPrice(CreatorPlanPricing pricing, string currency)
+    {
+        var symbol = currency switch
+        {
+            "USD" => "$",
+            "EUR" => "€",
+            "GBP" => "£",
+            _ => "$"
+        };
+
+        var value = currency switch
+        {
+            "USD" => pricing.ValueUSD,
+            "EUR" => pricing.ValueEuro,
+            "GBP" => pricing.ValueGbPound,
+            _ => pricing.ValueUSD
+        };
+
+        return $"{symbol}{value:F2}";
+    }
+
+    private bool IsPopularPlan(CreatorPlan plan) => plan.Name.Contains("Pro") || plan.Name.Contains("Professional") || plan.Name.Contains("Starter");
+    private string GetCardClass(CreatorPlan plan)
+    {
+        var baseClass = "rounded-lg pb-2 cursor-pointer transition-all duration-300";
+        if (SelectedSubscription.CreatorPlanId == plan.Guid) return $"{baseClass} border-2 border-primary";
+        if (IsPopularPlan(plan)) return $"{baseClass} border-2 border-primary-lighten";
+        return baseClass;
+    }
+    private string GetCardStyle(CreatorPlan plan) => SelectedSubscription.CreatorPlanId == plan.Guid ? "transform: scale(1.02);" : "transform: scale(1);";
+    private string GetFeatureIcon(bool isAvailable) => isAvailable ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel;
+    private string GetFeatureTextClass(bool isAvailable) => isAvailable ? "" : "text-decoration-line-through mud-text-secondary";
+    private Variant GetButtonVariant(CreatorPlan plan) => SelectedSubscription.CreatorPlanId == plan.Guid ? Variant.Filled : Variant.Outlined;
+    private Color GetButtonColor(CreatorPlan plan)
+    {
+        if (SelectedSubscription.CreatorPlanId == plan.Guid) return Color.Success;
+        if (IsPopularPlan(plan)) return Color.Primary;
+        return Color.Primary;
+    }
+    private string GetButtonText(CreatorPlan plan) => SelectedSubscription.CreatorPlanId == plan.Guid ? "Selected" : "Select Plan";
+}

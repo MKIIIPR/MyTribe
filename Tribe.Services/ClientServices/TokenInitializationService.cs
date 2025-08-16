@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.JSInterop;
 using Tribe.Client.Services;
+using Tribe.Services.ClientServices.SimpleAuth;
 
 namespace Tribe.Services.ClientServices
 {
@@ -40,7 +41,7 @@ namespace Tribe.Services.ClientServices
                 if (!string.IsNullOrEmpty(token))
                 {
                     // Store token in localStorage for client use
-                    await _authService.StoreTokenAsync(token);
+                    //await _authService.StoreTokenAsync(token);
                     _apiService.SetAuthToken(token);
                 }
             }

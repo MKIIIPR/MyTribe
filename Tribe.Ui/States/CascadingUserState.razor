@@ -1,0 +1,112 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using Microsoft.Extensions.Logging
+@using Tribe.Client.Services
+@using Tribe.Services.States
+@using Tribe.Services.States.Tribe.Services.States
+@using static Tribe.Bib.CommunicationModels.ComModels
+@inject IUserApiService UserApiService
+@inject UserState _user
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ILogger<CascadingUserState> Logger
+
+<CascadingValue Value="_user">
+    @Child
+</CascadingValue>
+
+@code {
+    [Parameter] public RenderFragment Child { get; set; } = default!;
+
+    // Lokaler Zustand, um zu prüfen, ob sich die Authentifizierung geändert hat
+    private ClaimsPrincipal? _lastUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAuthData();
+        AuthStateProvider.AuthenticationStateChanged += OnAuthStateChanged;
+    }
+
+    private async void OnAuthStateChanged(Task<AuthenticationState> task)
+    {
+        await LoadAuthData();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadAuthData()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var newCurrentUser = authState.User;
+
+            // Prüfen, ob sich der Benutzer oder seine Claims geändert haben
+            if (!HasUserChanged(newCurrentUser, _lastUser))
+            {
+                // Wenn sich nichts geändert hat, beenden wir die Methode.
+                return;
+            }
+
+            // Lokalen Zustand aktualisieren
+            _lastUser = newCurrentUser;
+
+            // Ein neues Update-Objekt erstellen
+            var update = new UserStateUpdate(newCurrentUser);
+
+            // Profil abrufen, wenn der Benutzer jetzt authentifiziert ist
+            if (newCurrentUser.Identity?.IsAuthenticated == true)
+            {
+                // Nur API-Aufruf, wenn der Benutzer gerade erst angemeldet wurde
+                // oder wenn das Profil noch nicht geladen wurde.
+                if (!_user.IsAuthenticated)
+                {
+                    update.TribeProfile = await UserApiService.GetProfileAsync();
+                }
+                else
+                {
+                    // Das bestehende Profil beibehalten
+                    update.TribeProfile = _user.TribeProfile;
+                }
+            }
+
+            // Den UserState-Dienst mit dem neuen Update-Objekt aktualisieren
+            _user.UpdateState(update);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Fehler beim Laden der Authentifizierungsdaten.");
+        }
+    }
+
+    private bool HasUserChanged(ClaimsPrincipal? newUser, ClaimsPrincipal? oldUser)
+    {
+        // Einfacher Fall: Ein Objekt ist null, das andere nicht.
+        if (newUser == null && oldUser == null) return false;
+        if (newUser == null || oldUser == null) return true;
+
+        // Prüfen, ob sich der Authentifizierungsstatus geändert hat.
+        if (newUser.Identity?.IsAuthenticated != oldUser.Identity?.IsAuthenticated) return true;
+
+        // Wenn beide authentifiziert sind, Claims vergleichen
+        if (newUser.Identity?.IsAuthenticated == true)
+        {
+            var newClaims = newUser.Claims.OrderBy(c => c.Type).ThenBy(c => c.Value).ToList();
+            var oldClaims = oldUser.Claims.OrderBy(c => c.Type).ThenBy(c => c.Value).ToList();
+
+            if (newClaims.Count != oldClaims.Count) return true;
+
+            for (int i = 0; i < newClaims.Count; i++)
+            {
+                if (newClaims[i].Type != oldClaims[i].Type || newClaims[i].Value != oldClaims[i].Value)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public void Dispose()
+    {
+        AuthStateProvider.AuthenticationStateChanged -= OnAuthStateChanged;
+    }
+}

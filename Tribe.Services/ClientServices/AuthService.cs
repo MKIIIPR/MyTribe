@@ -3,20 +3,11 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 using System.IdentityModel.Tokens.Jwt;
+using Tribe.Services.ClientServices.SimpleAuth;
 using static Tribe.Bib.CommunicationModels.ComModels;
 
 namespace Tribe.Client.Services
 {
-    public interface IAuthService
-    {
-        Task<LoginResponse?> LoginAsync(string email, string password);
-        Task<bool> LogoutAsync();
-        Task<UserInfo?> GetCurrentUserAsync();
-        Task<string?> GetStoredTokenAsync();
-        Task StoreTokenAsync(string token);
-        Task RemoveTokenAsync();
-        bool IsTokenExpired(string token);
-    }
 
     public class AuthService : IAuthService
     {
@@ -25,7 +16,8 @@ namespace Tribe.Client.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private const string TOKEN_KEY = "authToken";
         private const string COOKIE_KEY = "jwt_token";
-
+        public event Action<UserInfo?>? OnUserLoggedIn;
+        public event Action? OnUserLoggedOut;
         public AuthService(IApiService apiService, IJSRuntime jsRuntime, IHttpContextAccessor httpContextAccessor)
         {
             _apiService = apiService;

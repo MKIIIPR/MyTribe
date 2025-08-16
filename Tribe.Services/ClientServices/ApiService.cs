@@ -15,8 +15,8 @@ namespace Tribe.Client.Services
 
     public class ApiService : IApiService
     {
-        private readonly HttpClient _httpClient;
-        private readonly JsonSerializerOptions _jsonOptions;
+        public readonly HttpClient _httpClient;
+        public readonly JsonSerializerOptions _jsonOptions;
 
         public ApiService(HttpClient httpClient)
         {

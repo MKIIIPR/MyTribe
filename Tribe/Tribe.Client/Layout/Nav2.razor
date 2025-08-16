@@ -1,5 +1,6 @@
 ﻿@implements IDisposable
 @using Tribe.Client.Services
+@using Tribe.Services.ClientServices.SimpleAuth
 @inject NavigationManager NavigationManager
 @inject IAuthService AuthService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -9,7 +10,7 @@
     <MudNavLink Href="userdashboard" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">user</MudNavLink>
     <MudNavLink Href="counter" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">Counter</MudNavLink>
     <MudNavGroup Title="User" Expanded="true">
-        <MudNavLink Href="Profile">Users</MudNavLink>
+        <MudNavLink Href="UserDashboard">Dashboard</MudNavLink>
         <MudNavLink Href="Creator">creator</MudNavLink>
         <MudNavLink Href="UserSensitiv">Security</MudNavLink>
     </MudNavGroup>

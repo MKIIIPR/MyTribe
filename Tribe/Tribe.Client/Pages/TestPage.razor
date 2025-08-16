@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Tribe.Client.Services
 @using Tribe.Client.Models
+@using Tribe.Services.ClientServices.SimpleAuth
 @inject IApiService ApiService
 @inject IAuthService AuthService
 @inject ISignalRService SignalRService
@@ -156,87 +157,87 @@
 
     private async Task TestProtectedEndpoint()
     {
-        isLoading = true;
-        try
-        {
-            // Set token before making request
-            var token = await AuthService.GetStoredTokenAsync();
-            if (!string.IsNullOrEmpty(token))
-            {
-                ApiService.SetAuthToken(token);
-            }
-            else
-            {
-                lastResult = "No authentication token found";
-                lastSeverity = Severity.Error;
-                return;
-            }
+        // isLoading = true;
+        // try
+        // {
+        //     // Set token before making request
+        //     var token = await AuthService.GetStoredTokenAsync();
+        //     if (!string.IsNullOrEmpty(token))
+        //     {
+        //         ApiService.SetAuthToken(token);
+        //     }
+        //     else
+        //     {
+        //         lastResult = "No authentication token found";
+        //         lastSeverity = Severity.Error;
+        //         return;
+        //     }
 
-            var result = await ApiService.GetAsync<object>("api/test/protected");
-            if (result != null)
-            {
-                lastResult = System.Text.Json.JsonSerializer.Serialize(result, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-                lastSeverity = Severity.Success;
-            }
-            else
-            {
-                lastResult = "No data received from protected endpoint - check authentication";
-                lastSeverity = Severity.Warning;
-            }
-        }
-        catch (Exception ex)
-        {
-            lastResult = $"Error: {ex.Message}";
-            lastSeverity = Severity.Error;
-        }
-        finally
-        {
-            isLoading = false;
-        }
+        //     var result = await ApiService.GetAsync<object>("api/test/protected");
+        //     if (result != null)
+        //     {
+        //         lastResult = System.Text.Json.JsonSerializer.Serialize(result, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        //         lastSeverity = Severity.Success;
+        //     }
+        //     else
+        //     {
+        //         lastResult = "No data received from protected endpoint - check authentication";
+        //         lastSeverity = Severity.Warning;
+        //     }
+        // }
+        // catch (Exception ex)
+        // {
+        //     lastResult = $"Error: {ex.Message}";
+        //     lastSeverity = Severity.Error;
+        // }
+        // finally
+        // {
+        //     isLoading = false;
+        // }
     }
 
     private async Task GetCurrentUser()
     {
-        isLoading = true;
-        try
-        {
-            // Debug: Token prüfen
-            var token = await AuthService.GetStoredTokenAsync();
-            if (string.IsNullOrEmpty(token))
-            {
-                lastResult = "No authentication token found";
-                lastSeverity = Severity.Error;
-                return;
-            }
+        // isLoading = true;
+        // try
+        // {
+        //     // Debug: Token prüfen
+        //     var token = await AuthService.GetStoredTokenAsync();
+        //     if (string.IsNullOrEmpty(token))
+        //     {
+        //         lastResult = "No authentication token found";
+        //         lastSeverity = Severity.Error;
+        //         return;
+        //     }
 
-            if (AuthService.IsTokenExpired(token))
-            {
-                lastResult = "Authentication token has expired";
-                lastSeverity = Severity.Warning;
-                return;
-            }
+        //     if (AuthService.IsTokenExpired(token))
+        //     {
+        //         lastResult = "Authentication token has expired";
+        //         lastSeverity = Severity.Warning;
+        //         return;
+        //     }
 
-            var user = await AuthService.GetCurrentUserAsync();
-            if (user != null)
-            {
-                lastResult = System.Text.Json.JsonSerializer.Serialize(user, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-                lastSeverity = Severity.Success;
-            }
-            else
-            {
-                lastResult = $"No user data received - Token exists but API returned null. Token: {token[..Math.Min(50, token.Length)]}...";
-                lastSeverity = Severity.Warning;
-            }
-        }
-        catch (Exception ex)
-        {
-            lastResult = $"Error: {ex.Message}";
-            lastSeverity = Severity.Error;
-        }
-        finally
-        {
-            isLoading = false;
-        }
+        //     var user = await AuthService.GetCurrentUserAsync();
+        //     if (user != null)
+        //     {
+        //         lastResult = System.Text.Json.JsonSerializer.Serialize(user, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        //         lastSeverity = Severity.Success;
+        //     }
+        //     else
+        //     {
+        //         lastResult = $"No user data received - Token exists but API returned null. Token: {token[..Math.Min(50, token.Length)]}...";
+        //         lastSeverity = Severity.Warning;
+        //     }
+        // }
+        // catch (Exception ex)
+        // {
+        //     lastResult = $"Error: {ex.Message}";
+        //     lastSeverity = Severity.Error;
+        // }
+        // finally
+        // {
+        //     isLoading = false;
+        // }
     }
 
     private async Task LogoutClient()

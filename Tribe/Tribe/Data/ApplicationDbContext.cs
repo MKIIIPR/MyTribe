@@ -13,7 +13,8 @@ namespace Tribe.Data
         public DbSet<TribeProfile> TribeProfiles { get; set; }
         public DbSet<CreatorProfile> CreatorProfiles { get; set; }
         public DbSet<ProfileFollow> ProfileFollows { get; set; }
-
+        public DbSet<CreatorPlan> CreatorPlans { get; set; }
+        public DbSet<CreatorPlanPricing> CreatorPlanPricings{ get; set; }
         public DbSet<CreatorToken> CreatorTokens { get; set; }
         public DbSet<ProfileTokenHolding> ProfileTokenHoldings { get; set; }
 
@@ -25,6 +26,7 @@ namespace Tribe.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+            CreatorPlanSeeder.SeedData(builder);
 
             // === IDENTITY TABLES UMBENENNEN ===
             builder.Entity<ApplicationUser>().ToTable("Users");
@@ -34,12 +36,26 @@ namespace Tribe.Data
             builder.Entity<IdentityUserLogin<string>>().ToTable("UserLogins");
             builder.Entity<IdentityUserToken<string>>().ToTable("UserTokens");
             builder.Entity<IdentityRoleClaim<string>>().ToTable("RoleClaims");
+            #region CreatorPlan Configuration
+            builder.Entity<CreatorSubscription>()
+            .HasOne(cs => cs.TribeProfile)
+            .WithOne(tp => tp.ActiveCreatorSubscription)
+            .HasForeignKey<CreatorSubscription>(cs => cs.TribeProfileId)
+            .OnDelete(DeleteBehavior.Cascade);
 
-            builder.Entity<TribeProfile>()
-          .ToTable("TribeProfiles");
+            builder.Entity<CreatorSubscription>()
+                .HasOne(cs => cs.CreatorPlan)
+                .WithMany(cp => cp.Subscriptions)
+                .HasForeignKey(cs => cs.CreatorPlanId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            builder.Entity<CreatorProfile>()
-                .ToTable("CreatorProfiles");
+            builder.Entity<CreatorSubscription>()
+                .HasOne(cs => cs.CreatorPlanPricing)
+                .WithMany()
+                .HasForeignKey(cs => cs.CreatorPlanPricingId)
+                .OnDelete(DeleteBehavior.Restrict);
+            #endregion
+
             // === PROFILE KONFIGURATION ===
             builder.Entity<TribeProfile>(entity =>
             {
@@ -50,15 +66,12 @@ namespace Tribe.Data
                 entity.HasIndex(e => e.ApplicationUserId).IsUnique();
                 entity.HasIndex(e => e.DisplayName);
 
-                entity.HasOne(e => e.User)
-                      .WithOne()
-                      .HasForeignKey<TribeProfile>(e => e.ApplicationUserId)
-                      .OnDelete(DeleteBehavior.Cascade); // Löscht das Profil, wenn der User gelöscht wird.
+                
             });
 
             builder.Entity<CreatorProfile>(entity =>
             {
-                entity.HasBaseType<TribeProfile>();
+                
                 entity.Property(e => e.CreatorName).HasMaxLength(100);
                 entity.HasIndex(e => e.CreatorName).IsUnique()
                       .HasFilter("[CreatorName] IS NOT NULL");

@@ -1,0 +1,119 @@
+﻿@using MudBlazor
+@using static Tribe.Bib.CommunicationModels.ComModels
+
+<MudText Typo="Typo.h5" Class="mb-4">Billing Information</MudText>
+
+@if (SelectedPlan != null)
+{
+    @* @{
+        var selectedPricing = SelectedPlan.PricingList?.FirstOrDefault(p => p.Duration == SelectedDuration);
+    } *@
+    
+    <!-- Order Summary -->
+    <MudPaper Class="pa-4 mb-6" Elevation="3">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Class="mr-2" />
+            Order Summary
+        </MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="8">
+                <MudText><strong>Plan:</strong> @SelectedPlan.Name</MudText>
+                <MudText><strong>Billing Cycle:</strong> @SelectedDuration</MudText>
+                <MudText><strong>Tokens Included:</strong> @($"{SelectedPlan.TokenMenge:N0}")</MudText>
+                @if (SelectedDuration == "Annual")
+                {
+                    <p>Save 20% with Annual Billing</p>
+                }
+            </MudItem>
+            <MudItem xs="12" sm="4" Class="d-flex align-end justify-end">
+               @*  @if (selectedPricing != null)
+                {
+                    <div class="text-right">
+                        <MudText Typo="Typo.h4" Color="Color.Primary"><strong>€@selectedPricing.ValueEuro</strong></MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@SelectedDuration.ToLower()</MudText>
+                    </div>
+                } *@
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Billing Address -->
+    <MudPaper Class="pa-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.LocationOn" Class="mr-2" />
+            Billing Address
+        </MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="BillingData.FirstName" 
+                              Label="First Name" 
+                              Variant="Variant.Outlined"
+                              Required="true" 
+                              OnBlur="NotifyDataChanged" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="BillingData.LastName" 
+                              Label="Last Name" 
+                              Variant="Variant.Outlined"
+                              Required="true" 
+                              OnBlur="NotifyDataChanged" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="BillingData.Address" 
+                              Label="Street Address" 
+                              Variant="Variant.Outlined"
+                              Required="true" 
+                              OnBlur="NotifyDataChanged" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="BillingData.City" 
+                              Label="City" 
+                              Variant="Variant.Outlined"
+                              Required="true" 
+                              OnBlur="NotifyDataChanged" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudTextField @bind-Value="BillingData.PostalCode" 
+                              Label="Postal Code" 
+                              Variant="Variant.Outlined"
+                              Required="true" 
+                              OnBlur="NotifyDataChanged" />
+            </MudItem>
+            <MudItem xs="12" sm="3">
+                <MudTextField @bind-Value="BillingData.Country" 
+                              Label="Country" 
+                              Variant="Variant.Outlined"
+                              Required="true" 
+                              OnBlur="NotifyDataChanged" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+}
+else
+{
+    <MudAlert Severity="Severity.Warning">
+        Please select a plan first.
+    </MudAlert>
+}
+
+@code {
+    [Parameter] public CreatorPlan? SelectedPlan { get; set; }
+    [Parameter] public string SelectedDuration { get; set; } = "Monthly";
+    [Parameter] public BillingAddress BillingData { get; set; } = new();
+    [Parameter] public EventCallback<BillingAddress> OnBillingDataChanged { get; set; }
+
+    private async Task NotifyDataChanged()
+    {
+        await OnBillingDataChanged.InvokeAsync(BillingData);
+    }
+
+    public bool IsValid()
+    {
+        return !string.IsNullOrWhiteSpace(BillingData.FirstName) && 
+               !string.IsNullOrWhiteSpace(BillingData.LastName) && 
+               !string.IsNullOrWhiteSpace(BillingData.Address) && 
+               !string.IsNullOrWhiteSpace(BillingData.City) && 
+               !string.IsNullOrWhiteSpace(BillingData.PostalCode) && 
+               !string.IsNullOrWhiteSpace(BillingData.Country);
+    }
+}

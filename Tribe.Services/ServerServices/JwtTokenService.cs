@@ -23,6 +23,7 @@ public class JwtTokenService : IJwtTokenService
 
     public string GenerateToken(ApplicationUser user)
     {
+        
         var jwtSettings = _configuration.GetSection("JwtSettings");
         var secretKey = jwtSettings["SecretKey"];
         var issuer = jwtSettings["Issuer"];

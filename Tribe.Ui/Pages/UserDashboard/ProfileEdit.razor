@@ -3,14 +3,22 @@
 @using Microsoft.AspNetCore.Components.Forms
 @using MudBlazor
 @using System.ComponentModel.DataAnnotations
+@using Tribe.Client.Services
+@using Tribe.Services.States
+@using Tribe.Ui.Pages.UserDashboard.CreatorProfile
+@using Tribe.Ui.Pages.UserDashboard.CreatorProfile.CreatCreatorDialog
+@inject IUserApiService _userApi
+@inject IDialogService DialogService
+
 @inject AuthenticationStateProvider AuthStateProvider
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8 mb-8">
     <MudPaper Elevation="2" Class="pa-6">
+        
         <MudText Typo="Typo.h4" GutterBottom="true" Class="mb-6">
             <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-3" />
-            Profil erstellen
+            EditProfile
         </MudText>
-
+        <Tribe.Ui.Components.TribeProfileView Profile="@Profile" />
      
             <MudGrid>
                 <!-- Anzeigename -->
@@ -24,25 +32,35 @@
                                  Required="true"
                                  For="@(() => Profile.DisplayName)" />
                 </MudItem>
-
-                <!-- Avatar URL -->
-                <MudItem xs="12">
-                    <MudTextField @bind-Value="Profile.AvatarUrl"
-                                 Label="Avatar-URL (optional)"
-                                 Variant="Variant.Outlined"
-                                 Placeholder="https://example.com/avatar.jpg"
-                                 HelperText="Gib eine Bild-URL ein, um ein Profilbild festzulegen." />
-                </MudItem>
-
-                <!-- Avatar Vorschau -->
+                 <MudItem xs="12" Style="display:flex">
+                @if (Profile != null && !(Profile.AvatarUrl ?? string.Empty).Contains("data"))
+                {
+                   <MudItem xs="6">
+                        <MudTextField @bind-Value="Profile.AvatarUrl"
+                                      
+                                      Label="Avatar-URL (optional)"
+                                      Variant="Variant.Outlined"
+                                      Placeholder="https://example.com/avatar.jpg" />
+                        </MudItem>
+                }
                 @if (!string.IsNullOrEmpty(Profile.AvatarUrl))
                 {
-                    <MudItem xs="12">
+                    
                         <MudPaper Elevation="1" Class="pa-2 d-inline-flex" Style="border-radius: 50%;">
-                            <MudAvatar Image="@Profile.AvatarUrl" Size="Size.Medium" />
+                            <MudAvatar>
+                                <MudImage Src="@Profile.AvatarUrl"></MudImage>
+                            </MudAvatar>
+
                         </MudPaper>
-                    </MudItem>
-                }
+                      
+                    
+                }<div style="display:flex">
+                <Tribe.Ui.Components.FileUploader OnImageUploaded="HandleAvatarUpload"></Tribe.Ui.Components.FileUploader>
+                <MudButton OnClick="@(() => Profile.AvatarUrl = "")">clear</MudButton>
+                </div>
+                </MudItem>
+                <!-- Avatar Vorschau -->
+
 
                 <!-- Bio -->
                 <MudItem xs="12">
@@ -87,15 +105,15 @@
             <MudDivider Class="my-6" />
 
             <MudStack Row="true" Spacing="4" Justify="Justify.FlexEnd" Class="mt-4">
-                <MudButton Type="reset" Variant="Variant.Text" Color="Color.Secondary" OnClick="Cancel">
-                    Abbrechen
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="BecomeCreator">
+                    become creator
                 </MudButton>
                 <MudButton ButtonType="ButtonType.Submit" 
                             OnClick="HandleValidSubmit" 
                           Variant="Variant.Filled" 
                           Color="Color.Primary" 
                           StartIcon="@Icons.Material.Filled.Save">
-                    Profil speichern
+                    update profile
                 </MudButton>
             </MudStack>
     
@@ -103,24 +121,82 @@
 </MudContainer>
 
 @code {
-    private TribeProfile Profile { get; set; } = new();
+    [CascadingParameter]
+    private UserState UserState { get; set; } = default!;
+   
 
+    // Public property for binding in the UI
+    public TribeProfile Profile
+    {
+        get => _profile;
+        set => _profile = value;
+    }
+    private async Task BecomeCreator()
+    {
+        var options = new DialogOptions()
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            
+        };
+
+        var parameters = new DialogParameters { ["TribeProfile"] = Profile };
+
+        // Öffne den Dialog
+        var dialog = DialogService.Show<CreatorPlanSelectionDialaog>(null, parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is CreatorSubscription subscription)
+        {
+            // Verarbeiten des Ergebnisses nach der Dialogschließung
+            // z.B. das Profil aktualisieren oder einen API-Aufruf tätigen
+            Profile.ActiveCreatorSubscription = subscription;
+            // ... Weitere Logik, wie das Speichern des aktualisierten Profils
+            Snackbar.Add("Creator-Plan erfolgreich ausgewählt!", Severity.Success);
+        }
+        else
+        {
+            // Dialog wurde abgebrochen
+            Snackbar.Add("Creator-Plan-Auswahl wurde abgebrochen.", Severity.Warning);
+        }
+    }
+    public void HandleAvatarUpload(string imageUrl)
+    {
+        // Hier kannst du die Logik zum Speichern des hochgeladenen Avatars implementieren
+        // Zum Beispiel, das Bild in das Profil einfügen
+        Profile.AvatarUrl = imageUrl;
+    }
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
+    private TribeProfile _profile = new(); // Initialisierung mit einem Standardwert
+
+
     protected override void OnParametersSet()
     {
-        // Aktualisiere IsCreator basierend auf Profil-Typ
-        Profile.IsCreator = Profile.ProfileType == Constants.ProfileTypes.Creator;
+        base.OnParametersSet();
+        // Führe die Zuweisung hier einmalig aus
+        // Der Null-Coalescing Operator stellt sicher, dass _profile immer einen Wert hat
+        if (UserState.TribeProfile is not null)
+        {
+            _profile = UserState.TribeProfile;
+        }
+        else
+        {
+            _profile = new TribeProfile();
+        }
     }
+
+    // ... Rest of your component code
+
 
     private async Task HandleValidSubmit()
     {
         try
         {
-            // Hier API aufrufen, um Profil zu speichern
-            // Beispiel: await ProfileService.CreateAsync(Profile);
-            
+
+            await _userApi.UpdateAsync(Profile);
+
             Snackbar.Add("Profil erfolgreich erstellt!", Severity.Success);
            
         }

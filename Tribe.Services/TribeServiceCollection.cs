@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Tribe.Client.Services;
 using Tribe.Services.ClientServices;
+using Tribe.Services.ClientServices.SimpleAuth;
 
 namespace Tribe.Services
 {
@@ -21,10 +22,10 @@ namespace Tribe.Services
                 client.BaseAddress = new Uri(baseAddress);
             });
             services.AddScoped<IClientApiService, ClientApiService>();
-            services.AddScoped<IAuthService, AuthService>();
+            
             
             services.AddScoped<IApiService, ApiService>();
-            services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IAuthService, SimplifiedAuthService>();
             services.AddScoped<ISignalRService, SignalRService>();
             services.AddScoped<ITokenInitializationService, TokenInitializationService>();
 

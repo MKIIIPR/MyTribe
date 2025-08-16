@@ -5,7 +5,8 @@
     // Add profile data for application users by adding properties to the ApplicationUser class
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
-   
+    using static Tribe.Bib.CommunicationModels.ComModels;
+
     // 1. ApplicationUser - PRIVATE Daten (Backend only)
     public class ApplicationUser : IdentityUser
     {
@@ -48,54 +49,148 @@
     }
 
     // 2. TribeProfile - �FFENTLICHE Anzeige-Daten
+    // 1. TribeProfile - Basis-Profil
     public class TribeProfile
     {
         [Key]
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
-        // === �FFENTLICHE BASIC INFO ===
+        // === ÖFFENTLICHE BASIC INFO ===
         [Required]
         [MaxLength(100)]
-        public string DisplayName { get; set; } // �ffentlicher Anzeigename
-
+        public string DisplayName { get; set; } = string.Empty;
         public string? AvatarUrl { get; set; }
         public string? Bio { get; set; }
 
         // === PROFILE STATUS ===
         public string ProfileType { get; set; } = Constants.ProfileTypes.Regular;
-        public bool IsCreator { get; set; } = false;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         // === USER CONNECTION ===
-        [Required]
-        public string ApplicationUserId { get; set; }
         [ForeignKey(nameof(ApplicationUserId))]
-        public ApplicationUser User { get; set; }
+        public string ApplicationUserId { get; set; } = string.Empty;
+
+        public bool IsCreator { get; set; } = false;
+
+        // Navigation Properties
+        public CreatorSubscription? ActiveCreatorSubscription { get; set; }
     }
 
-    // 3. CreatorProfile - �FFENTLICHE Creator-Daten
+    // 2. CreatorPlan - Die verfügbaren Pläne
+    public class CreatorPlan
+    {
+        [Key]
+        public string Guid { get; set; } = System.Guid.NewGuid().ToString();
+
+        public string Name { get; set; } = string.Empty;
+        public int TokenMenge { get; set; }
+        public string FeaturesJson { get; set; } = "{}";
+        public bool CanUploadDigitalContent { get; set; } = true;
+        public bool HaveShopItems { get; set; } = true;
+        public bool CanCreateEvents { get; set; } = true;
+        public bool CanCreateRaffles { get; set; } = true;
+        public bool CanUseWindowsApp { get; set; } = true;
+        public bool Aktiv { get; set; }
+
+        // Navigation Property
+        public virtual ICollection<CreatorPlanPricing> PricingList { get; set; } = new List<CreatorPlanPricing>();
+        public virtual ICollection<CreatorSubscription> Subscriptions { get; set; } = new List<CreatorSubscription>();
+    }
+
+    // 3. CreatorPlanPricing - Preise für die Pläne
+    public class CreatorPlanPricing
+    {
+        [Key]
+        public string Guid { get; set; } = System.Guid.NewGuid().ToString();
+
+        [ForeignKey(nameof(CreatorPlan))]
+        public string CreatorPlanGuid { get; set; } = string.Empty;
+
+        public string Duration { get; set; } = "Monthly"; // Monthly, Annual
+
+        [Column(TypeName = "decimal(18, 2)")]
+        public decimal ValueUSD { get; set; }
+
+        [Column(TypeName = "decimal(18, 2)")]
+        public decimal ValueEuro { get; set; }
+
+        [Column(TypeName = "decimal(18, 2)")]
+        public decimal ValueGbPound { get; set; }
+
+        // Navigation Property
+        public virtual CreatorPlan CreatorPlan { get; set; } = null!;
+    }
+
+    // 4. CreatorSubscription - Die Zwischentabelle/Subscription-Tabelle
+    public class CreatorSubscription
+    {
+        [Key]
+        public string Guid { get; set; } = System.Guid.NewGuid().ToString();
+
+        // Verweis auf TribeProfile
+        [ForeignKey(nameof(TribeProfile))]
+        public string TribeProfileId { get; set; } = string.Empty;
+
+        // Verweis auf CreatorPlan
+        [ForeignKey(nameof(CreatorPlan))]
+        public string CreatorPlanId { get; set; } = string.Empty;
+
+        // Verweis auf das spezifische Pricing
+        [ForeignKey(nameof(CreatorPlanPricing))]
+        public string CreatorPlanPricingId { get; set; } = string.Empty;
+        public string Currency { get; set; } = "USD"; // USD, EUR, GBP
+        [Column(TypeName = "decimal(18, 2)")]
+        public double SubValue { get; set; }
+        // Subscription Details
+        public DateTime StartDate { get; set; } = DateTime.UtcNow;
+        public DateTime? EndDate { get; set; } // null = aktiv
+        public string Duration { get; set; } = "Monthly"; // Monthly, Annual    
+        public bool IsActive { get; set; } = true;
+        public bool IsPaid { get; set; } = false;
+
+        // Payment Details
+        public string PaymentStatus { get; set; } = "Pending"; // Pending, Paid, Failed, Cancelled
+        public string? PaymentMethod { get; set; }
+        public string? TransactionId { get; set; }
+        public DateTime? LastPaymentDate { get; set; }
+        public DateTime? NextPaymentDate { get; set; }
+
+        // Subscription Management
+        public bool AutoRenew { get; set; } = true;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        // Navigation Properties
+        public virtual TribeProfile TribeProfile { get; set; } = null!;
+        public virtual CreatorPlan CreatorPlan { get; set; } = null!;
+        public virtual CreatorPlanPricing CreatorPlanPricing { get; set; } = null!;
+     
+        public BillingAddress BillingAddress { get; set; } = new();
+        public PaymentInfo PaymentInfo { get; set; } = new();
+    }
+
+    // 5. CreatorProfile - Erweiterte Creator-Daten
     public class CreatorProfile : TribeProfile
     {
         public CreatorProfile()
         {
-            ProfileType = Constants.ProfileTypes.Regular;
+            ProfileType = Constants.ProfileTypes.Creator;
             IsCreator = true;
         }
 
-        // === �FFENTLICHE CREATOR INFO ===
+        // === ÖFFENTLICHE CREATOR INFO ===
         [MaxLength(100)]
-        public string? CreatorName { get; set; } // Eindeutiger Creator-Name
-
+        public string? CreatorName { get; set; }
         public string? ImageTemplateUrl { get; set; }
         public string? BannerUrl { get; set; }
 
-        // === �FFENTLICHE STATS ===
+        // === ÖFFENTLICHE STATS ===
         public int FollowerCount { get; set; } = 0;
         public int TotalRaffles { get; set; } = 0;
         public int TotalTokensDistributed { get; set; } = 0;
 
-        // === �FFENTLICHE SOCIAL LINKS ===
+        // === SOCIAL LINKS ===
         public string? PatreonUrl { get; set; }
         public string? YouTubeUrl { get; set; }
         public string? TwitchUrl { get; set; }
@@ -103,20 +198,22 @@
         public string? InstagramUrl { get; set; }
         public string? TikTokUrl { get; set; }
         public string? DiscordUrl { get; set; }
-      
 
-        // === �FFENTLICHE CREATOR SETTINGS ===
+        // === CREATOR SETTINGS ===
         public bool AcceptingCollaborations { get; set; } = false;
         public string? CollaborationInfo { get; set; }
         public bool VerifiedCreator { get; set; } = false;
         public DateTime? VerifiedAt { get; set; }
 
-        // Navigation properties for related data
-        public ICollection<CreatorToken> CreatorTokens { get; set; } = new List<CreatorToken>();
-        public ICollection<Raffle> Raffles { get; set; } = new List<Raffle>();
-        public ICollection<AffiliatePartner> AffiliatePartners { get; set; } = new List<AffiliatePartner>();
-        public ICollection<CreatorPlacement> Placements { get; set; } = new List<CreatorPlacement>(); // Enum f�r Creator-Platzierungen
+        // Navigation Properties
+        public virtual ICollection<CreatorToken> CreatorTokens { get; set; } = new List<CreatorToken>();
+        public virtual ICollection<Raffle> Raffles { get; set; } = new List<Raffle>();
+        public virtual ICollection<AffiliatePartner> AffiliatePartners { get; set; } = new List<AffiliatePartner>();
+        public virtual ICollection<CreatorPlacement> Placements { get; set; } = new List<CreatorPlacement>();
     }
+
+    // 6. DbContext Configuration
+  
     // 5. CREATOR TOKENS
     public class CreatorToken
     {

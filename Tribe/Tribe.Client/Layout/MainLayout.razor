@@ -1,13 +1,14 @@
 ﻿
 @inherits LayoutComponentBase
-@using Tribe.Client.Services
 @using Microsoft.AspNetCore.Components.Authorization
+@using Tribe.Client.Services
+@using Tribe.Services.ClientServices.SimpleAuth
 @inject ISignalRService SignalRService
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthStateProvider
 
 <CascadingAuthenticationState>
-    <Tribe.Ui.States.CascadingTribeProfile>
+    <Tribe.Ui.States.CascadingUserState>
         <Child>
     <MudThemeProvider />
     <MudPopoverProvider />
@@ -54,7 +55,7 @@
         </MudMainContent>
     </MudLayout>
         </Child>
-    </Tribe.Ui.States.CascadingTribeProfile>
+    </Tribe.Ui.States.CascadingUserState>
 </CascadingAuthenticationState>
 
 <div id="blazor-error-ui" data-nosnippet>

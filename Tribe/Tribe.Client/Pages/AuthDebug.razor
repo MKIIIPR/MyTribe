@@ -1,0 +1,123 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using System.Net.Http
+@using System.Net.Http.Json
+@using System.Threading.Tasks
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div style="border: 2px solid #3498db; padding: 15px; margin: 10px; background: rgba(52,152,219,0.1);">
+    <h3>🔍 Authentifizierungs-Debug-Info</h3>
+
+    <div style="display: grid; grid-template-columns: 200px 1fr; gap: 10px; margin-bottom: 15px;">
+        <strong>Auth Status:</strong>
+        <span style="color: @(IsAuthenticated ? "#27ae60" : "#c0392b")">
+            @(IsAuthenticated ? "✅ AUTHENTIFIZIERT" : "❌ NICHT AUTHENTIFIZIERT")
+        </span>
+
+        <strong>Benutzername:</strong>
+        <span>@(CurrentUser?.Identity?.Name ?? "Nicht verfügbar")</span>
+
+        <strong>Authentifizierungstyp:</strong>
+        <span>@(CurrentUser?.Identity?.AuthenticationType ?? "Nicht verfügbar")</span>
+
+        <strong>Anzahl der Claims:</strong>
+        <span>@UserClaimsCount Claims</span>
+
+        <strong>Letzte Aktualisierung:</strong>
+        <span>@LastUpdate.ToString("HH:mm:ss")</span>
+    </div>
+
+    @if (IsAuthenticated && UserClaims.Any())
+    {
+        <div style="background: rgba(41,128,185,0.2); padding: 10px; border-radius: 5px; margin-top: 10px;">
+            <h4>🎫 Benutzer-Claims:</h4>
+            <ul style="max-height: 200px; overflow-y: auto; list-style-type: none; padding: 0;">
+                @foreach (var claim in UserClaims)
+                {
+                    <li style="margin-bottom: 5px; padding: 5px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <strong>@claim.Type:</strong> @claim.Value
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+
+    <div style="margin-top: 15px;">
+        <button @onclick="RefreshData" style="background: #2980b9; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">
+            🔄 Daten aktualisieren
+        </button>
+        <button @onclick="ClearTestData" style="background: #c0392b; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">
+            🗑️ Testdaten löschen
+        </button>
+    </div>
+
+    <div style="margin-top: 10px; font-size: 12px; color: #666;">
+        <strong>Aktualisierungszähler:</strong> @RefreshCount | <strong>Komponenten-ID:</strong> @ComponentId
+    </div>
+</div>
+
+@code {
+    private ClaimsPrincipal? CurrentUser;
+    private bool IsAuthenticated => CurrentUser?.Identity?.IsAuthenticated ?? false;
+    private List<Claim> UserClaims = new();
+    private int UserClaimsCount => UserClaims.Count;
+    private DateTime LastUpdate = DateTime.Now;
+    private int RefreshCount = 0;
+    private string ComponentId = Guid.NewGuid().ToString()[..8];
+
+    // Entfernen Sie das CascadingParameter, da es nicht mehr benötigt wird
+    // [CascadingParameter]
+    // public CascadingAuthenticationState? CascadingProfile { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAuthData();
+        // Abonnieren des Authentifizierungsstatus-Änderungsereignisses
+        AuthStateProvider.AuthenticationStateChanged += OnAuthStateChanged;
+    }
+
+    // OnParametersSetAsync wird nun nicht mehr benötigt, da keine Parameter mehr gesetzt werden
+    // Sie könnten es bei Bedarf für andere Logik behalten, aber für diesen Zweck wurde es entfernt.
+
+    private async void OnAuthStateChanged(Task<AuthenticationState> task)
+    {
+        await LoadAuthData();
+        // InvokeAsync ist notwendig, um sicherzustellen, dass die UI im richtigen Thread aktualisiert wird
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadAuthData()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            CurrentUser = authState.User;
+            UserClaims = CurrentUser?.Claims?.ToList() ?? new List<Claim>();
+            LastUpdate = DateTime.Now;
+            RefreshCount++;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Fehler beim Laden der Auth-Daten: {ex.Message}");
+        }
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadAuthData();
+        StateHasChanged();
+    }
+
+    private void ClearTestData()
+    {
+        RefreshCount = 0;
+        LastUpdate = DateTime.Now;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        // Wichtig: Entfernen Sie das Event-Abonnement beim Entsorgen der Komponente
+        AuthStateProvider.AuthenticationStateChanged -= OnAuthStateChanged;
+    }
+}

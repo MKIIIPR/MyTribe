@@ -12,8 +12,8 @@ using Tribe.Data;
 namespace Tribe.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250812191335_afiliate")]
-    partial class afiliate
+    [Migration("20250815101735_creator")]
+    partial class creator
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,140 @@ namespace Tribe.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("CreatorPlan", b =>
+                {
+                    b.Property<string>("Guid")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("Aktiv")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanCreateEvents")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanCreateRaffles")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanUploadDigitalContent")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanUseWindowsApp")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("FeaturesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("HaveShopItems")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TokenMenge")
+                        .HasColumnType("int");
+
+                    b.HasKey("Guid");
+
+                    b.ToTable("CreatorPlans");
+
+                    b.HasData(
+                        new
+                        {
+                            Guid = "basic-plan-guid-001",
+                            Aktiv = true,
+                            CanCreateEvents = true,
+                            CanCreateRaffles = true,
+                            CanUploadDigitalContent = true,
+                            CanUseWindowsApp = true,
+                            FeaturesJson = "{\"maxProjects\":1,\"support\":\"email\"}",
+                            HaveShopItems = true,
+                            Name = "Basic Plan",
+                            TokenMenge = 10000
+                        },
+                        new
+                        {
+                            Guid = "pro-plan-guid-002",
+                            Aktiv = true,
+                            CanCreateEvents = true,
+                            CanCreateRaffles = true,
+                            CanUploadDigitalContent = true,
+                            CanUseWindowsApp = true,
+                            FeaturesJson = "{\"maxProjects\":10,\"support\":\"priority\"}",
+                            HaveShopItems = true,
+                            Name = "Pro Plan",
+                            TokenMenge = 50000
+                        });
+                });
+
+            modelBuilder.Entity("CreatorPlanPricing", b =>
+                {
+                    b.Property<string>("Guid")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CreatorPlanGuid")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Duration")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("ValueEuro")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal>("ValueGbPound")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal>("ValueUSD")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.HasKey("Guid");
+
+                    b.HasIndex("CreatorPlanGuid");
+
+                    b.ToTable("CreatorPlanPricings");
+
+                    b.HasData(
+                        new
+                        {
+                            Guid = "basic-plan-guid-001-monthly",
+                            CreatorPlanGuid = "basic-plan-guid-001",
+                            Duration = "Monthly",
+                            ValueEuro = 8.99m,
+                            ValueGbPound = 7.99m,
+                            ValueUSD = 9.99m
+                        },
+                        new
+                        {
+                            Guid = "basic-plan-guid-001-annual",
+                            CreatorPlanGuid = "basic-plan-guid-001",
+                            Duration = "Annual",
+                            ValueEuro = 89.99m,
+                            ValueGbPound = 79.99m,
+                            ValueUSD = 99.99m
+                        },
+                        new
+                        {
+                            Guid = "pro-plan-guid-002-monthly",
+                            CreatorPlanGuid = "pro-plan-guid-002",
+                            Duration = "Monthly",
+                            ValueEuro = 26.99m,
+                            ValueGbPound = 23.99m,
+                            ValueUSD = 29.99m
+                        },
+                        new
+                        {
+                            Guid = "pro-plan-guid-002-annual",
+                            CreatorPlanGuid = "pro-plan-guid-002",
+                            Duration = "Annual",
+                            ValueEuro = 269.99m,
+                            ValueGbPound = 239.99m,
+                            ValueUSD = 299.99m
+                        });
+                });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
@@ -348,6 +482,140 @@ namespace Tribe.Migrations
                     b.HasIndex("CreatorProfileId");
 
                     b.ToTable("CreatorPlacement");
+                });
+
+            modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.CreatorPlan", b =>
+                {
+                    b.Property<string>("Guid")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("Aktiv")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanCreateEvents")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanCreateRaffles")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanUploadDigitalContent")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanUseWindowsApp")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("FeaturesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("HaveShopItems")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TokenMenge")
+                        .HasColumnType("int");
+
+                    b.HasKey("Guid");
+
+                    b.ToTable("CreatorPlan");
+                });
+
+            modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.CreatorPlanPricing", b =>
+                {
+                    b.Property<string>("Guid")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CreatorPlanGuid")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Duration")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("ValueEuro")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal>("ValueGbPound")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.Property<decimal>("ValueUSD")
+                        .HasColumnType("decimal(18, 2)");
+
+                    b.HasKey("Guid");
+
+                    b.HasIndex("CreatorPlanGuid");
+
+                    b.ToTable("CreatorPlanPricing");
+                });
+
+            modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.CreatorSubscription", b =>
+                {
+                    b.Property<string>("Guid")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("AutoRenew")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatorPlanId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CreatorPlanPricingId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime?>("LastPaymentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("NextPaymentDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PaymentStatus")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TransactionId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TribeProfileId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Guid");
+
+                    b.HasIndex("CreatorPlanId");
+
+                    b.HasIndex("CreatorPlanPricingId");
+
+                    b.HasIndex("TribeProfileId")
+                        .IsUnique();
+
+                    b.ToTable("CreatorSubscription");
                 });
 
             modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.CreatorToken", b =>
@@ -800,6 +1068,17 @@ namespace Tribe.Migrations
                     b.HasDiscriminator().HasValue("CreatorProfile");
                 });
 
+            modelBuilder.Entity("CreatorPlanPricing", b =>
+                {
+                    b.HasOne("CreatorPlan", "CreatorPlan")
+                        .WithMany("PricingList")
+                        .HasForeignKey("CreatorPlanGuid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatorPlan");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -854,7 +1133,7 @@ namespace Tribe.Migrations
             modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.AffiliatePartner", b =>
                 {
                     b.HasOne("Tribe.Bib.Models.TribeRelated.CreatorProfile", "Creator")
-                        .WithMany("Partner")
+                        .WithMany("AffiliatePartners")
                         .HasForeignKey("CreatorProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -869,6 +1148,44 @@ namespace Tribe.Migrations
                         .HasForeignKey("CreatorProfileId");
 
                     b.Navigation("Creator");
+                });
+
+            modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.CreatorPlanPricing", b =>
+                {
+                    b.HasOne("Tribe.Bib.Models.TribeRelated.CreatorPlan", "CreatorPlan")
+                        .WithMany("PricingList")
+                        .HasForeignKey("CreatorPlanGuid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatorPlan");
+                });
+
+            modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.CreatorSubscription", b =>
+                {
+                    b.HasOne("Tribe.Bib.Models.TribeRelated.CreatorPlan", "CreatorPlan")
+                        .WithMany("Subscriptions")
+                        .HasForeignKey("CreatorPlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Tribe.Bib.Models.TribeRelated.CreatorPlanPricing", "CreatorPlanPricing")
+                        .WithMany()
+                        .HasForeignKey("CreatorPlanPricingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Tribe.Bib.Models.TribeRelated.TribeProfile", "TribeProfile")
+                        .WithOne("ActiveCreatorSubscription")
+                        .HasForeignKey("Tribe.Bib.Models.TribeRelated.CreatorSubscription", "TribeProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatorPlan");
+
+                    b.Navigation("CreatorPlanPricing");
+
+                    b.Navigation("TribeProfile");
                 });
 
             modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.CreatorToken", b =>
@@ -1002,22 +1319,28 @@ namespace Tribe.Migrations
                     b.Navigation("Raffle");
                 });
 
+            modelBuilder.Entity("CreatorPlan", b =>
+                {
+                    b.Navigation("PricingList");
+                });
+
+            modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.CreatorPlan", b =>
+                {
+                    b.Navigation("PricingList");
+
+                    b.Navigation("Subscriptions");
+                });
+
             modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.TribeProfile", b =>
                 {
-                    b.HasOne("Tribe.Bib.Models.TribeRelated.ApplicationUser", "User")
-                        .WithOne()
-                        .HasForeignKey("Tribe.Bib.Models.TribeRelated.TribeProfile", "ApplicationUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
+                    b.Navigation("ActiveCreatorSubscription");
                 });
 
             modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.CreatorProfile", b =>
                 {
-                    b.Navigation("CreatorTokens");
+                    b.Navigation("AffiliatePartners");
 
-                    b.Navigation("Partner");
+                    b.Navigation("CreatorTokens");
 
                     b.Navigation("Placements");
 

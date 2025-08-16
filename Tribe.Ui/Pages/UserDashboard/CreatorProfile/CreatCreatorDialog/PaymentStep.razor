@@ -1,0 +1,136 @@
+﻿@using MudBlazor
+
+@using static Tribe.Bib.CommunicationModels.ComModels
+
+<MudText Typo="Typo.h5" Class="mb-4">Payment Method</MudText>
+
+<!-- Payment Method Selection -->
+<MudPaper Class="pa-4 mb-4" Elevation="2">
+    <MudText Typo="Typo.h6" Class="mb-3">Choose Payment Method</MudText>
+    <MudRadioGroup T="string" @bind-SelectedOption="PaymentData.PaymentMethod">
+        <MudRadio Value="@("CreditCard")" Color="Color.Primary" Class="mb-2">
+            <div class="d-flex align-center">
+                <MudIcon Icon="Icons.Material.Filled.CreditCard" Class="mr-2" />
+                <MudText>Credit Card</MudText>
+            </div>
+        </MudRadio>
+        <MudRadio Value="@("PayPal")" Color="Color.Primary" Class="mb-2">
+            <div class="d-flex align-center">
+                <MudIcon Icon="Icons.Material.Filled.AccountBalanceWallet" Class="mr-2" />
+                <MudText>PayPal</MudText>
+            </div>
+        </MudRadio>
+        <MudRadio Value="@("BankTransfer")" Color="Color.Primary" Class="mb-2">
+            <div class="d-flex align-center">
+                <MudIcon Icon="Icons.Material.Filled.AccountBalance" Class="mr-2" />
+                <MudText>Bank Transfer</MudText>
+            </div>
+        </MudRadio>
+    </MudRadioGroup>
+</MudPaper>
+
+<!-- Credit Card Form -->
+@if (PaymentData.PaymentMethod == "CreditCard")
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.CreditCard" Class="mr-2" />
+            Credit Card Details
+        </MudText>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="PaymentData.CardNumber" 
+                              Label="Card Number" 
+                              Placeholder="1234 5678 9012 3456"
+                              Variant="Variant.Outlined"
+                              Required="true" 
+                              OnBlur="NotifyDataChanged" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="PaymentData.CardHolderName" 
+                              Label="Cardholder Name" 
+                              Variant="Variant.Outlined"
+                              Required="true" 
+                              OnBlur="NotifyDataChanged" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="PaymentData.ExpiryDate" 
+                              Label="Expiry Date (MM/YY)" 
+                              Placeholder="12/25"
+                              Variant="Variant.Outlined"
+                              Required="true" 
+                              OnBlur="NotifyDataChanged" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudTextField @bind-Value="PaymentData.CvvCode" 
+                              Label="CVV" 
+                              Placeholder="123"
+                              Variant="Variant.Outlined"
+                              InputType="InputType.Password"
+                              Required="true" 
+                              OnBlur="NotifyDataChanged" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+}
+else if (PaymentData.PaymentMethod == "PayPal")
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Class="mr-2" />
+            <MudText>You will be redirected to PayPal to complete your payment securely.</MudText>
+        </div>
+    </MudPaper>
+}
+else if (PaymentData.PaymentMethod == "BankTransfer")
+{
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <div class="d-flex align-center mb-2">
+            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Class="mr-2" />
+            <MudText><strong>Bank Transfer Instructions</strong></MudText>
+        </div>
+        <MudText Class="mb-2">Please transfer the amount to the following account:</MudText>
+        <MudText><strong>IBAN:</strong> DE89 3704 0044 0532 0130 00</MudText>
+        <MudText><strong>BIC:</strong> COBADEFFXXX</MudText>
+        <MudText><strong>Reference:</strong> Your Order ID will be provided after confirmation</MudText>
+    </MudPaper>
+}
+
+<!-- Terms and Conditions -->
+<MudPaper Class="pa-4" Elevation="1">
+    <MudCheckBox T="bool" @bind-Checked="PaymentData.AcceptTerms" 
+                 Color="Color.Primary">
+        I agree to the <MudLink Href="#" Color="Color.Primary">Terms and Conditions</MudLink> and <MudLink Href="#" Color="Color.Primary">Privacy Policy</MudLink>
+    </MudCheckBox>
+    <MudCheckBox T="bool" @bind-Checked="PaymentData.AcceptRecurring" 
+                 Color="Color.Primary" 
+                 Class="mt-2">
+        I understand this is a recurring subscription that will automatically renew
+    </MudCheckBox>
+</MudPaper>
+
+@code {
+    [Parameter] public PaymentInfo PaymentData { get; set; } = new();
+    [Parameter] public EventCallback<PaymentInfo> OnPaymentDataChanged { get; set; }
+
+    private async Task NotifyDataChanged()
+    {
+        await OnPaymentDataChanged.InvokeAsync(PaymentData);
+    }
+
+    public bool IsValid()
+    {
+        var basicConditions = PaymentData.AcceptTerms && PaymentData.AcceptRecurring;
+
+        if (PaymentData.PaymentMethod == "CreditCard")
+        {
+            return basicConditions && 
+                   !string.IsNullOrWhiteSpace(PaymentData.CardNumber) && 
+                   !string.IsNullOrWhiteSpace(PaymentData.CardHolderName) && 
+                   !string.IsNullOrWhiteSpace(PaymentData.ExpiryDate) && 
+                   !string.IsNullOrWhiteSpace(PaymentData.CvvCode);
+        }
+
+        return basicConditions;
+    }
+}

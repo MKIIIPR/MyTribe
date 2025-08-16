@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Tribe.Services.ClientServices.SimpleAuth;
 
 namespace Tribe.Client.Services;
 

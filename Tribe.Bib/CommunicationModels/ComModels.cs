@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Tribe.Bib.Models.TribeRelated;
 
 
 namespace Tribe.Bib.CommunicationModels
@@ -20,8 +21,33 @@ namespace Tribe.Bib.CommunicationModels
             public string Password { get; set; } = string.Empty;
         }
 
+        public class BillingAddress
+        {
+            [Key]
+            public string Guid { get; set; } = System.Guid.NewGuid().ToString();
+            public string FirstName { get; set; } = string.Empty;
+            public string LastName { get; set; } = string.Empty;
+            public string Address { get; set; } = string.Empty;
+            public string City { get; set; } = string.Empty;
+            public string PostalCode { get; set; } = string.Empty;
+            public string Country { get; set; } = string.Empty;
+        }
 
-    public class LoginResponse
+        public class PaymentInfo
+        {
+            [Key]
+            public string Guid { get; set; } = System.Guid.NewGuid().ToString();
+            public string PaymentMethod { get; set; } = "CreditCard";
+            public string CardNumber { get; set; } = string.Empty;
+            public string CardHolderName { get; set; } = string.Empty;
+            public string ExpiryDate { get; set; } = string.Empty;
+            public string CvvCode { get; set; } = string.Empty;
+            public bool AcceptTerms { get; set; } = false;
+            public bool AcceptRecurring { get; set; } = false;
+        }
+
+      
+        public class LoginResponse
     {
         public string Token { get; set; } = string.Empty;
         public string UserId { get; set; } = string.Empty;

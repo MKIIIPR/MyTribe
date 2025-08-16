@@ -1,0 +1,13 @@
+﻿<div style="display:flex">
+    <MudBlazor.MudAvatar>
+        <MudBlazor.MudImage Src="@Profile.AvatarUrl"></MudBlazor.MudImage>
+     
+
+    </MudBlazor.MudAvatar>
+    <div style="display: flex;align-items: center;padding-left: 5px;">
+    @Profile.DisplayName
+    </div>
+</div>
+@code {
+    [Parameter] public TribeProfile Profile { get; set; }
+}

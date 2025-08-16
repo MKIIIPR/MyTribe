@@ -7,7 +7,7 @@ using System.Security.Claims;
 using Tribe.Bib.Models.TribeRelated;
 using Tribe.Data;
 
-namespace Tribe.API.Controllers
+namespace Tribe.API.Controller
 {
     [ApiController]
     [Route("api/[controller]")]

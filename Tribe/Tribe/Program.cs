@@ -12,9 +12,11 @@ using Tribe.Client.Pages;
 using Tribe.Client.Services;
 using Tribe.Components;
 using Tribe.Components.Account;
+using Tribe.Controller.Services;
 using Tribe.Data;
 using Tribe.Services;
 using Tribe.Services.ClientServices;
+using Tribe.Services.ClientServices.SimpleAuth;
 using Tribe.Services.Hubs;
 using Tribe.Services.ServerServices;
 using Tribe.Services.States;
@@ -22,18 +24,28 @@ using Tribe.Services.States;
 var builder = WebApplication.CreateBuilder(args);
 
 #region ClientNonsense
-builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserApiService, UserApiService>();
+builder.Services.AddScoped<IAuthService, SimplifiedAuthService>();
 builder.Services.AddScoped<IApiService, ApiService>();
 builder.Services.AddScoped<IClientApiService, ClientApiService>();
 builder.Services.AddScoped<ISignalRService, SignalRService>();
 builder.Services.AddScoped<ITokenInitializationService, TokenInitializationService>();
-builder.Services.AddScoped<TribeProfileState>();
+builder.Services.AddScoped<UserState>();
 
 builder.Services.AddHttpClient();
 #endregion
 
+#region Controller/ControllerSErvices
+
+builder.Services.AddScoped<IOwnProfileService, OwnProfileService>();
+
+#endregion
 // Add MudBlazor services
 builder.Services.AddMudServices();
+builder.Services.AddControllers().AddJsonOptions(x =>
+{
+    x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+});
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
