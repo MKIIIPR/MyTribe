@@ -266,7 +266,7 @@
         public CreatorProfile Creator { get; set; }
 
     }
-    // 4. FOLLOW SYSTEM
+   
     public class ProfileFollow
     {
         [Key]

@@ -5,10 +5,6 @@
 
 @if (SelectedPlan != null)
 {
-    @* @{
-        var selectedPricing = SelectedPlan.PricingList?.FirstOrDefault(p => p.Duration == SelectedDuration);
-    } *@
-    
     <!-- Order Summary -->
     <MudPaper Class="pa-4 mb-6" Elevation="3">
         <MudText Typo="Typo.h6" Class="mb-3">
@@ -17,74 +13,101 @@
         </MudText>
         <MudGrid>
             <MudItem xs="12" sm="8">
-                <MudText><strong>Plan:</strong> @SelectedPlan.Name</MudText>
-                <MudText><strong>Billing Cycle:</strong> @SelectedDuration</MudText>
-                <MudText><strong>Tokens Included:</strong> @($"{SelectedPlan.TokenMenge:N0}")</MudText>
+                <MudText  ><strong>Plan:</strong> @SelectedPlan.Name</MudText>
+                <MudText  ><strong>Billing Cycle:</strong> @SelectedDuration</MudText>
+                <MudText  ><strong>Currency:</strong> @SelectedCurrency</MudText>
+                <MudText  ><strong>Tokens Included:</strong> @($"{SelectedPlan.TokenMenge:N0}")</MudText>
                 @if (SelectedDuration == "Annual")
                 {
-                    <p>Save 20% with Annual Billing</p>
+                    <MudText Color="Color.Success">
+                        <MudIcon Icon="@Icons.Material.Filled.Savings" Size="Size.Small" Class="mr-1" />
+                        Save with Annual Billing
+                    </MudText>
                 }
             </MudItem>
-            <MudItem xs="12" sm="4" Class="d-flex align-end justify-end">
-               @*  @if (selectedPricing != null)
+            <div  Class="d-flex align-end justify-end">
+                @{
+                    var selectedPricing = SelectedPlan.PricingList?.FirstOrDefault(p => p.Duration == SelectedDuration);
+                }
+                @if (selectedPricing != null)
                 {
                     <div class="text-right">
-                        <MudText Typo="Typo.h4" Color="Color.Primary"><strong>€@selectedPricing.ValueEuro</strong></MudText>
+                        <MudText Typo="Typo.h4" Color="Color.Primary">
+                            <strong>@GetFormattedPrice(selectedPricing, SelectedCurrency)</strong>
+                        </MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">@SelectedDuration.ToLower()</MudText>
                     </div>
-                } *@
-            </MudItem>
+                }
+            </div>
         </MudGrid>
     </MudPaper>
 
     <!-- Billing Address -->
     <MudPaper Class="pa-4" Elevation="2">
-        <MudText Typo="Typo.h6" Class="mb-3">
+        <MudText Typo="Typo.h6" Class="">
             <MudIcon Icon="@Icons.Material.Filled.LocationOn" Class="mr-2" />
             Billing Address
         </MudText>
         <MudGrid>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="BillingData.FirstName" 
-                              Label="First Name" 
+                <MudTextField @bind-Value="BillingData.FirstName"
+                              Label="First Name"
+                              Margin="Margin.Dense"
                               Variant="Variant.Outlined"
-                              Required="true" 
-                              OnBlur="NotifyDataChanged" />
+                              Required="true"
+                              OnBlur="NotifyDataChanged"
+                              Error="@(string.IsNullOrWhiteSpace(BillingData.FirstName) && _validationAttempted)"
+                              ErrorText="First name is required" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="BillingData.LastName" 
-                              Label="Last Name" 
+                <MudTextField  @bind-Value="BillingData.LastName"
+                              Label="Last Name"
+                              Margin="Margin.Dense"
                               Variant="Variant.Outlined"
-                              Required="true" 
-                              OnBlur="NotifyDataChanged" />
+                              Required="true"
+                              OnBlur="NotifyDataChanged"
+                              Error="@(string.IsNullOrWhiteSpace(BillingData.LastName) && _validationAttempted)"
+                              ErrorText="Last name is required" />
             </MudItem>
             <MudItem xs="12">
-                <MudTextField @bind-Value="BillingData.Address" 
-                              Label="Street Address" 
+                <MudTextField @bind-Value="BillingData.Address"
+                              Label="Street Address"
+                              Margin="Margin.Dense"
                               Variant="Variant.Outlined"
-                              Required="true" 
-                              OnBlur="NotifyDataChanged" />
+                              Required="true"
+                              OnBlur="NotifyDataChanged"
+                              Error="@(string.IsNullOrWhiteSpace(BillingData.Address) && _validationAttempted)"
+                              ErrorText="Address is required" />
             </MudItem>
             <MudItem xs="12" sm="6">
-                <MudTextField @bind-Value="BillingData.City" 
-                              Label="City" 
+                <MudTextField @bind-Value="BillingData.City"
+                              Label="City"
+                              Margin="Margin.Dense"
                               Variant="Variant.Outlined"
-                              Required="true" 
-                              OnBlur="NotifyDataChanged" />
+                              Required="true"
+                              OnBlur="NotifyDataChanged"
+                              Error="@(string.IsNullOrWhiteSpace(BillingData.City) && _validationAttempted)"
+                              ErrorText="City is required" />
             </MudItem>
             <MudItem xs="12" sm="3">
-                <MudTextField @bind-Value="BillingData.PostalCode" 
-                              Label="Postal Code" 
+                <MudTextField @bind-Value="BillingData.PostalCode"
+                              Label="Postal Code"
+                              Margin="Margin.Dense"
                               Variant="Variant.Outlined"
-                              Required="true" 
-                              OnBlur="NotifyDataChanged" />
+                              Required="true"
+                              OnBlur="NotifyDataChanged"
+                              Error="@(string.IsNullOrWhiteSpace(BillingData.PostalCode) && _validationAttempted)"
+                              ErrorText="Postal code is required" />
             </MudItem>
             <MudItem xs="12" sm="3">
-                <MudTextField @bind-Value="BillingData.Country" 
-                              Label="Country" 
+                <MudTextField @bind-Value="BillingData.Country"
+                              Label="Country"
+                              Margin="Margin.Dense"
                               Variant="Variant.Outlined"
-                              Required="true" 
-                              OnBlur="NotifyDataChanged" />
+                              Required="true"
+                              OnBlur="NotifyDataChanged"
+                              Error="@(string.IsNullOrWhiteSpace(BillingData.Country) && _validationAttempted)"
+                              ErrorText="Country is required" />
             </MudItem>
         </MudGrid>
     </MudPaper>
@@ -99,21 +122,50 @@ else
 @code {
     [Parameter] public CreatorPlan? SelectedPlan { get; set; }
     [Parameter] public string SelectedDuration { get; set; } = "Monthly";
+    [Parameter] public string SelectedCurrency { get; set; } = "USD";
     [Parameter] public BillingAddress BillingData { get; set; } = new();
     [Parameter] public EventCallback<BillingAddress> OnBillingDataChanged { get; set; }
 
+    private bool _validationAttempted = false;
+
     private async Task NotifyDataChanged()
     {
+        _validationAttempted = true;
         await OnBillingDataChanged.InvokeAsync(BillingData);
+        StateHasChanged();
+    }
+
+    private string GetFormattedPrice(CreatorPlanPricing pricing, string currency)
+    {
+        var symbol = currency switch
+        {
+            "USD" => "$",
+            "EUR" => "€",
+            "GBP" => "£",
+            _ => "$"
+        };
+
+        var value = currency switch
+        {
+            "USD" => pricing.ValueUSD,
+            "EUR" => pricing.ValueEuro,
+            "GBP" => pricing.ValueGbPound,
+            _ => pricing.ValueUSD
+        };
+
+        return $"{symbol}{value:F2}";
     }
 
     public bool IsValid()
     {
-        return !string.IsNullOrWhiteSpace(BillingData.FirstName) && 
-               !string.IsNullOrWhiteSpace(BillingData.LastName) && 
-               !string.IsNullOrWhiteSpace(BillingData.Address) && 
-               !string.IsNullOrWhiteSpace(BillingData.City) && 
-               !string.IsNullOrWhiteSpace(BillingData.PostalCode) && 
+        _validationAttempted = true;
+        StateHasChanged();
+
+        return !string.IsNullOrWhiteSpace(BillingData.FirstName) &&
+               !string.IsNullOrWhiteSpace(BillingData.LastName) &&
+               !string.IsNullOrWhiteSpace(BillingData.Address) &&
+               !string.IsNullOrWhiteSpace(BillingData.City) &&
+               !string.IsNullOrWhiteSpace(BillingData.PostalCode) &&
                !string.IsNullOrWhiteSpace(BillingData.Country);
     }
 }

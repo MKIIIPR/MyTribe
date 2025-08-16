@@ -1,0 +1,234 @@
+﻿@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Logging
+@using MudBlazor
+@using System.Text.Json
+@using Tribe.Client.Services
+@using static Tribe.Bib.CommunicationModels.ComModels
+@inject ILogger<CreatorPlanSelectionDialog> _logger
+@inject HttpClient _client
+@inject IDialogService DialogService
+
+<MudDialog Style="max-width: 1000px;">
+    <DialogContent>
+        <MudContainer Class="mt-4">
+            <!-- Stepper Navigation -->
+            <MudStepper @ref="stepper"Class="mb-6"                        >
+
+                <MudStep Title="Choose Plan">
+                    <PlanSelectionStep CreatorPlans="@CreatorPlans"
+                                       SelectedSubscription="@CreatorApplication"
+                                       SelectedSubscriptionChanged="@HandleSubscriptionChange"
+                                       IsLoading="@IsLoading" />
+                </MudStep>
+
+                <MudStep Title="Billing Details">
+                    <BillingDetailsStep @ref="billingStep"
+                                        SelectedPlan="@CreatorApplication.CreatorPlan"
+                                        SelectedDuration="@CreatorApplication.Duration"
+                                        SelectedCurrency="@CreatorApplication.Currency"
+                                        BillingData="@CreatorApplication.BillingAddress"
+                                        OnBillingDataChanged="@OnBillingDataChanged" />
+                </MudStep>
+
+                <MudStep Title="Payment">
+                    <PaymentStep @ref="paymentStep"
+                                 PaymentData="@CreatorApplication.PaymentInfo"
+                                 SelectedPlan="@CreatorApplication.CreatorPlan"
+                                 SelectedCurrency="@CreatorApplication.Currency"
+                                 OnPaymentDataChanged="@OnPaymentDataChanged" />
+                </MudStep>
+
+            </MudStepper>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" StartIcon="@Icons.Material.Filled.Cancel">
+            Cancel
+        </MudButton>
+
+        <MudSpacer />
+
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public TribeProfile TribeProfile { get; set; } = new();
+
+    private MudStepper stepper = default!;
+    private BillingDetailsStep billingStep = default!;
+    private PaymentStep paymentStep = default!;
+
+    public CreatorSubscription CreatorApplication { get; set; } = new();
+    private List<CreatorPlan>? CreatorPlans { get; set; } = new List<CreatorPlan>();
+    private bool IsLoading { get; set; } = true;
+    private bool IsProcessing { get; set; } = false;
+    private int CurrentStep { get; set; } = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize CreatorApplication with TribeProfile
+        CreatorApplication.TribeProfile = TribeProfile;
+        CreatorApplication.TribeProfileId = TribeProfile.Id;
+
+        await LoadCreatorPlans();
+    }
+
+    private async Task LoadCreatorPlans()
+    {
+        try
+        {
+            IsLoading = true;
+            var response = await _client.GetAsync($"api/CreatorPlan");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseJson = await response.Content.ReadAsStringAsync();
+                var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+                CreatorPlans = JsonSerializer.Deserialize<List<CreatorPlan>>(responseJson, options);
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger?.LogError("LoadCreatorPlans API Error: {StatusCode} - {ErrorContent}", response.StatusCode, errorContent);
+                CreatorPlans = new();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error loading creator plans: {Message}", ex.Message);
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // Event Handlers
+    private async Task HandleSubscriptionChange(CreatorSubscription subscription)
+    {
+        CreatorApplication = subscription;
+
+        // Ensure TribeProfile connection remains intact
+        CreatorApplication.TribeProfile = TribeProfile;
+        CreatorApplication.TribeProfileId = TribeProfile.Id;
+
+        // Calculate SubValue based on selected pricing and currency
+        UpdateSubscriptionValue();
+
+        StateHasChanged();
+    }
+
+    private void UpdateSubscriptionValue()
+    {
+        if (CreatorApplication.CreatorPlanPricing != null)
+        {
+            CreatorApplication.SubValue = CreatorApplication.Currency switch
+            {
+                "USD" => (double)CreatorApplication.CreatorPlanPricing.ValueUSD,
+                "EUR" => (double)CreatorApplication.CreatorPlanPricing.ValueEuro,
+                "GBP" => (double)CreatorApplication.CreatorPlanPricing.ValueGbPound,
+                _ => (double)CreatorApplication.CreatorPlanPricing.ValueUSD
+            };
+        }
+    }
+
+    private async Task OnBillingDataChanged(BillingAddress billingData)
+    {
+        CreatorApplication.BillingAddress = billingData;
+        StateHasChanged();
+    }
+
+    private async Task OnPaymentDataChanged(PaymentInfo paymentData)
+    {
+        CreatorApplication.PaymentInfo = paymentData;
+        StateHasChanged();
+    }
+
+    // Navigation Logic
+    private void OnActiveStepChanged(int step)
+    {
+        CurrentStep = step;
+        StateHasChanged();
+    }
+
+  
+    private bool CanProceedToNextStep()
+    {
+        return CurrentStep switch
+        {
+            0 => CreatorApplication.CreatorPlan != null &&
+                 !string.IsNullOrEmpty(CreatorApplication.CreatorPlanId) &&
+                 CreatorApplication.CreatorPlanPricing != null,
+            1 => billingStep?.IsValid() ?? false,
+            _ => false
+        };
+    }
+
+    private bool CanConfirm()
+    {
+        return CreatorApplication.CreatorPlan != null &&
+               !string.IsNullOrEmpty(CreatorApplication.CreatorPlanId) &&
+               CreatorApplication.CreatorPlanPricing != null &&
+               (billingStep?.IsValid() ?? false) &&
+               (paymentStep?.IsValid() ?? false) &&
+               !IsProcessing;
+    }
+
+    private async Task Confirm()
+    {
+        if (!CanConfirm()) return;
+
+        try
+        {
+            IsProcessing = true;
+
+            // Finalize subscription data before API call
+            CreatorApplication.StartDate = DateTime.UtcNow;
+            CreatorApplication.CreatedAt = DateTime.UtcNow;
+            CreatorApplication.UpdatedAt = DateTime.UtcNow;
+            CreatorApplication.PaymentStatus = "Pending";
+            CreatorApplication.IsActive = false; // Will be activated after payment
+            CreatorApplication.IsPaid = false;
+
+            // Calculate next payment date
+            CreatorApplication.NextPaymentDate = CreatorApplication.Duration switch
+            {
+                "Monthly" => DateTime.UtcNow.AddMonths(1),
+                "Annual" => DateTime.UtcNow.AddYears(1),
+                "Lifetime" => null,
+                _ => DateTime.UtcNow.AddMonths(1)
+            };
+
+            // Send to API for processing
+            var response = await _client.GetAsync("api/CreatorSubscription");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseJson = await response.Content.ReadAsStringAsync();
+                var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+                var result = JsonSerializer.Deserialize<CreatorSubscription>(responseJson, options);
+
+                MudDialog.Close(DialogResult.Ok(result));
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger?.LogError("Subscription creation failed: {StatusCode} - {ErrorContent}", response.StatusCode, errorContent);
+                // TODO: Show error message to user
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error confirming subscription: {Message}", ex.Message);
+            // TODO: Show error message to user
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

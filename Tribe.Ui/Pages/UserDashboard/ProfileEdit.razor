@@ -143,7 +143,7 @@
         var parameters = new DialogParameters { ["TribeProfile"] = Profile };
 
         // Öffne den Dialog
-        var dialog = DialogService.Show<CreatorPlanSelectionDialaog>(null, parameters, options);
+        var dialog = DialogService.Show<CreatorPlanSelectionDialog>(null, parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled && result.Data is CreatorSubscription subscription)
