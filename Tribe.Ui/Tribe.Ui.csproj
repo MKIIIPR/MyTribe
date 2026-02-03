@@ -26,4 +26,8 @@
     <ProjectReference Include="..\Tribe.Services\Tribe.Services.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Pages\Shop\" />
+  </ItemGroup>
+
 </Project>

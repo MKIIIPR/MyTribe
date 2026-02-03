@@ -12,7 +12,7 @@ namespace Tribe.Services.States
         public event Action? OnChange;
 
         public ClaimsPrincipal? CurrentUser { get; private set; }
-        public TribeProfile? TribeProfile { get; private set; }
+        public TribeUser? TribeProfile { get; private set; }
         public bool IsAuthenticated => CurrentUser?.Identity?.IsAuthenticated ?? false;
         public List<Claim> UserClaims { get; private set; } = new();
         public int UserClaimsCount => UserClaims.Count;
@@ -42,7 +42,7 @@ namespace Tribe.Services.States
         public class UserStateUpdate
         {
             public ClaimsPrincipal? CurrentUser { get; }
-            public TribeProfile? TribeProfile { get; set; }
+            public TribeUser? TribeProfile { get; set; }
 
             public UserStateUpdate(ClaimsPrincipal? user)
             {

@@ -8,7 +8,7 @@ using Tribe.Data;
 
 #nullable disable
 
-namespace Tribe.Migrations
+namespace Tribe.Migrations.ApplicationDb
 {
     [DbContext(typeof(ApplicationDbContext))]
     partial class ApplicationDbContextModelSnapshot : ModelSnapshot
@@ -289,6 +289,76 @@ namespace Tribe.Migrations
                     b.ToTable("UserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Tribe.Bib.CommunicationModels.ComModels+BillingAddress", b =>
+                {
+                    b.Property<string>("Guid")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PostalCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Guid");
+
+                    b.ToTable("BillingAddress");
+                });
+
+            modelBuilder.Entity("Tribe.Bib.CommunicationModels.ComModels+PaymentInfo", b =>
+                {
+                    b.Property<string>("Guid")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("AcceptRecurring")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("AcceptTerms")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CardHolderName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CardNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CvvCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ExpiryDate")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PaymentMethod")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Guid");
+
+                    b.ToTable("PaymentInfo");
+                });
+
             modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.AffiliatePartner", b =>
                 {
                     b.Property<string>("Id")
@@ -324,6 +394,9 @@ namespace Tribe.Migrations
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
+
+                    b.Property<string>("BillingAddressGuid")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("City")
                         .HasColumnType("nvarchar(max)");
@@ -443,6 +516,8 @@ namespace Tribe.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BillingAddressGuid");
+
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -451,7 +526,7 @@ namespace Tribe.Migrations
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("AspNetUsers", (string)null);
                 });
 
             modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.CreatorPlacement", b =>
@@ -557,6 +632,10 @@ namespace Tribe.Migrations
                     b.Property<bool>("AutoRenew")
                         .HasColumnType("bit");
 
+                    b.Property<string>("BillingAddressGuid")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -567,6 +646,14 @@ namespace Tribe.Migrations
                     b.Property<string>("CreatorPlanPricingId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Duration")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("datetime2");
@@ -583,6 +670,10 @@ namespace Tribe.Migrations
                     b.Property<DateTime?>("NextPaymentDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("PaymentInfoGuid")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("PaymentMethod")
                         .HasColumnType("nvarchar(max)");
 
@@ -592,6 +683,9 @@ namespace Tribe.Migrations
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<decimal>("SubValue")
+                        .HasColumnType("decimal(18, 2)");
 
                     b.Property<string>("TransactionId")
                         .HasColumnType("nvarchar(max)");
@@ -605,9 +699,13 @@ namespace Tribe.Migrations
 
                     b.HasKey("Guid");
 
+                    b.HasIndex("BillingAddressGuid");
+
                     b.HasIndex("CreatorPlanId");
 
                     b.HasIndex("CreatorPlanPricingId");
+
+                    b.HasIndex("PaymentInfoGuid");
 
                     b.HasIndex("TribeProfileId")
                         .IsUnique();
@@ -949,7 +1047,7 @@ namespace Tribe.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.TribeProfile", b =>
+            modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.TribeUser", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
@@ -995,16 +1093,16 @@ namespace Tribe.Migrations
 
                     b.HasIndex("DisplayName");
 
-                    b.ToTable("TribeProfiles");
+                    b.ToTable("TribeUsers");
 
-                    b.HasDiscriminator().HasValue("TribeProfile");
+                    b.HasDiscriminator().HasValue("TribeUser");
 
                     b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.CreatorProfile", b =>
                 {
-                    b.HasBaseType("Tribe.Bib.Models.TribeRelated.TribeProfile");
+                    b.HasBaseType("Tribe.Bib.Models.TribeRelated.TribeUser");
 
                     b.Property<bool>("AcceptingCollaborations")
                         .HasColumnType("bit");
@@ -1138,6 +1236,15 @@ namespace Tribe.Migrations
                     b.Navigation("Creator");
                 });
 
+            modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.ApplicationUser", b =>
+                {
+                    b.HasOne("Tribe.Bib.CommunicationModels.ComModels+BillingAddress", "BillingAddress")
+                        .WithMany()
+                        .HasForeignKey("BillingAddressGuid");
+
+                    b.Navigation("BillingAddress");
+                });
+
             modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.CreatorPlacement", b =>
                 {
                     b.HasOne("Tribe.Bib.Models.TribeRelated.CreatorProfile", "Creator")
@@ -1160,6 +1267,12 @@ namespace Tribe.Migrations
 
             modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.CreatorSubscription", b =>
                 {
+                    b.HasOne("Tribe.Bib.CommunicationModels.ComModels+BillingAddress", "BillingAddress")
+                        .WithMany()
+                        .HasForeignKey("BillingAddressGuid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Tribe.Bib.Models.TribeRelated.CreatorPlan", "CreatorPlan")
                         .WithMany("Subscriptions")
                         .HasForeignKey("CreatorPlanId")
@@ -1172,15 +1285,25 @@ namespace Tribe.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Tribe.Bib.Models.TribeRelated.TribeProfile", "TribeProfile")
+                    b.HasOne("Tribe.Bib.CommunicationModels.ComModels+PaymentInfo", "PaymentInfo")
+                        .WithMany()
+                        .HasForeignKey("PaymentInfoGuid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Tribe.Bib.Models.TribeRelated.TribeUser", "TribeProfile")
                         .WithOne("ActiveCreatorSubscription")
                         .HasForeignKey("Tribe.Bib.Models.TribeRelated.CreatorSubscription", "TribeProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("BillingAddress");
+
                     b.Navigation("CreatorPlan");
 
                     b.Navigation("CreatorPlanPricing");
+
+                    b.Navigation("PaymentInfo");
 
                     b.Navigation("TribeProfile");
                 });
@@ -1204,7 +1327,7 @@ namespace Tribe.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Tribe.Bib.Models.TribeRelated.TribeProfile", "Follower")
+                    b.HasOne("Tribe.Bib.Models.TribeRelated.TribeUser", "Follower")
                         .WithMany()
                         .HasForeignKey("FollowerId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -1223,7 +1346,7 @@ namespace Tribe.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.HasOne("Tribe.Bib.Models.TribeRelated.TribeProfile", "Profile")
+                    b.HasOne("Tribe.Bib.Models.TribeRelated.TribeUser", "Profile")
                         .WithMany()
                         .HasForeignKey("ProfileId")
                         .OnDelete(DeleteBehavior.NoAction)
@@ -1247,7 +1370,7 @@ namespace Tribe.Migrations
 
             modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.RaffleEntry", b =>
                 {
-                    b.HasOne("Tribe.Bib.Models.TribeRelated.TribeProfile", "Profile")
+                    b.HasOne("Tribe.Bib.Models.TribeRelated.TribeUser", "Profile")
                         .WithMany()
                         .HasForeignKey("ProfileId")
                         .OnDelete(DeleteBehavior.NoAction)
@@ -1297,7 +1420,7 @@ namespace Tribe.Migrations
                         .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
-                    b.HasOne("Tribe.Bib.Models.TribeRelated.TribeProfile", "Profile")
+                    b.HasOne("Tribe.Bib.Models.TribeRelated.TribeUser", "Profile")
                         .WithMany()
                         .HasForeignKey("ProfileId")
                         .OnDelete(DeleteBehavior.NoAction)
@@ -1328,7 +1451,7 @@ namespace Tribe.Migrations
                     b.Navigation("Subscriptions");
                 });
 
-            modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.TribeProfile", b =>
+            modelBuilder.Entity("Tribe.Bib.Models.TribeRelated.TribeUser", b =>
                 {
                     b.Navigation("ActiveCreatorSubscription");
                 });

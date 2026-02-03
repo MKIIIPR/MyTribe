@@ -6,27 +6,43 @@ using Tribe.Services.ClientServices;
 using Tribe.Services.ClientServices.SimpleAuth;
 using Tribe.Services.States;
 using Tribe.Ui;
+
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
+#region MudBlazor
 builder.Services.AddMudServices();
+#endregion
 
-// HTTP Client
+#region HTTP Client
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+#endregion
 
-// Authentication - CascadingAuthenticationState wird im Layout verwendet
-builder.Services.AddScoped<IUserApiService, UserApiService>();
+#region Authentication
 builder.Services.AddAuthorizationCore();
+// Einheitlicher AuthenticationStateProvider - nur Cookie-basiert
 builder.Services.AddScoped<AuthenticationStateProvider, CookieAuthenticationStateProvider>();
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddTribeUiServices(builder.HostEnvironment.BaseAddress);
-builder.Services.AddSingleton<UserState>();
 builder.Services.AddScoped<IAuthService, SimplifiedAuthService>();
+#endregion
+
+#region API Services
+builder.Services.AddScoped<IUserApiService, UserApiService>();
+builder.Services.AddScoped<IApiService, ApiService>();
+builder.Services.AddScoped<IClientApiService, ClientApiService>();
+#endregion
+
+#region SignalR & State
 builder.Services.AddScoped<ISignalRService, SignalRService>();
 builder.Services.AddScoped<ITokenInitializationService, TokenInitializationService>();
+builder.Services.AddSingleton<UserState>();
+#endregion
+
+#region Tribe UI Services
+builder.Services.AddTribeUiServices(builder.HostEnvironment.BaseAddress);
+#endregion
 
 var app = builder.Build();
 
-// Initialize JWT token from server cookie after login
+// Token-Initialisierung vom Server-Cookie
 var tokenInitService = app.Services.GetRequiredService<ITokenInitializationService>();
 await tokenInitService.InitializeTokenFromCookieAsync();
 

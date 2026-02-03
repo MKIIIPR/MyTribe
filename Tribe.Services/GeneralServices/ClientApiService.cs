@@ -7,8 +7,8 @@ namespace Tribe.Client.Services
 {
     public interface IClientApiService
     {
-        Task<T?> GetByIdAsync<T>(string id);
         Task<List<T>?> GetAllAsync<T>(string endpoint);
+        Task<T?> GetByIdAsync<T>(string id);        
         Task<T?> CreateAsync<T>(string endpoint, T data);
         Task<T?> UpdateAsync<T>(string endpoint, string id, T data);
         Task<bool> DeleteAsync(string endpoint, string id);

@@ -1,0 +1,63 @@
+﻿.creator-token-card {
+    transition: all 0.3s ease;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+    .creator-token-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12) !important;
+        border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    /* === 2. Sanfte Skalierung für Buttons & Karten === */
+    .creator-token-card:hover,
+    .mud-button:hover {
+        transform: translateY(-2px);
+    }
+
+.mud-button {
+    transition: all 0.2s ease;
+}
+
+/* === 3. Avatar-Animation (optional) === */
+.creator-avatar-large {
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+    /* Wenn der Header schrumpft, wird Avatar kleiner – wird über Inline-Style gesteuert */
+    /* Du kannst hier aber z. B. einen Gloweffect beim Hover machen */
+    .creator-avatar-large:hover {
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+    }
+
+/* === 4. Allgemeine Glätte für Übergänge === */
+.transition-slow {
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* === 5. Hover für Social-Icons (falls direkt im HTML) === */
+.social-icon-link {
+    display: inline-block;
+    opacity: 0.8;
+    transition: all 0.2s ease;
+}
+
+    .social-icon-link:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+/* === 6. Optional: Leichter Fade-In für Inhalte === */
+.main-content > .mud-grid {
+    transition: opacity 0.4s ease;
+}
+
+/* === 7. Fix für MudCard – manchmal braucht man !important bei Hover === */
+.mud-card {
+    transition: all 0.3s ease;
+}
+
+    .mud-card:hover {
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+    }

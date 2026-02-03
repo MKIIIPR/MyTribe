@@ -1,0 +1,301 @@
+﻿@using Microsoft.JSInterop
+@using MudBlazor
+
+@inject IJSRuntime JSRuntime
+<div style="position: relative;overflow: hidden;width: 619px;height: 457px;">
+    <div class="scroll-cards-container" id="@ContainerId" style="background: @BackgroundGradient; position: absolute;left: -263px;">
+
+        <div class="progress-bar" id="@($"{ContainerId}-progress")"></div>
+        <div class="void" style="max-width: @(MaxWidth)px;">
+            <div class="crop">
+                <ul class="card-list">
+                    @* Rendere nur MaxVisibleCards DOM-Elemente (z.B. 8) *@
+                    @for (int i = 0; i < MaxVisibleCards; i++)
+                    {
+                        var currentCard = GetCardForPosition(i);
+                        <li data-position="@i">
+                            <div class="scroll-card" @onclick="() => OnCardClick.InvokeAsync(currentCard)">
+                                <MudPaper Class="card-content" Elevation="3" MaxHeight="150px" MinHeight="150px">
+                                    <MudStack Spacing="2">
+                                        <MudText Typo="Typo.h6" Class="model-name" Color="Color.Primary">
+                                            @currentCard.Title
+                                        </MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                            @currentCard.Description
+                                        </MudText>
+                                        @if (currentCard.Badge != null)
+                                        {
+                                            <MudChip T="bool" Size="Size.Small" Color="Color.Info" Variant="Variant.Filled">
+                                                @currentCard.Badge
+                                            </MudChip>
+                                        }
+                                    </MudStack>
+                                </MudPaper>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+            <div class="mask"></div>
+            <div class="center-circle">
+                @if (CenterContent != null)
+                {
+                    @CenterContent
+                }
+                else if (!string.IsNullOrEmpty(CenterText))
+                {
+                    <div class="center-text">
+                        <MudText Typo="Typo.h5" Align="Align.Center" Color="Color.Primary">
+                            @CenterText
+                        </MudText>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="scroll-area" id="@($"{ContainerId}-scroll")">
+            <div class="scroll-content" style="height: @(Cards.Count* CardHeightUnit)px;"></div>
+        </div>
+
+        @if (ShowIndicator)
+        {
+            <div class="scroll-indicator">
+                <MudText Typo="Typo.caption" Color="Color.Inherit">
+                    @IndicatorText (@(_currentStartIndex + 1) / @Cards.Count)
+                </MudText>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<ScrollCardItem> Cards { get; set; } = new();
+    [Parameter] public EventCallback<ScrollCardItem> OnCardClick { get; set; }
+    [Parameter] public RenderFragment? CenterContent { get; set; }
+    [Parameter] public string? CenterText { get; set; }
+    [Parameter] public bool ShowIndicator { get; set; } = true;
+    [Parameter] public string IndicatorText { get; set; } = "Karte";
+    [Parameter] public string ContainerId { get; set; } = $"scroll-cards-{Guid.NewGuid():N}";
+    [Parameter] public int MaxWidth { get; set; } = 600;
+    [Parameter] public string BackgroundGradient { get; set; } = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+    [Parameter] public int CircleRadius { get; set; } = 500;
+    [Parameter] public int CardWidth { get; set; } = 80;
+    [Parameter] public int MaxVisibleCards { get; set; } = 8; // NUR 8 DOM-Elemente werden gerendert!
+    [Parameter] public int CardHeightUnit { get; set; } = 50;
+
+    private int _currentStartIndex = 0;
+
+    public class ScrollCardItem
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string? Badge { get; set; }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Übergebe:
+            // - Cards.Count = 450 (alle verfügbaren Karten)
+            // - MaxVisibleCards = 8 (nur 8 Positionen mit echter Rotation)
+            await JSRuntime.InvokeVoidAsync("initScrollCardsLimited",
+                ContainerId,
+                Cards.Count,        // 450 Karten insgesamt
+                MaxVisibleCards,    // Nur 8 sichtbare Positionen mit Rotation
+                CircleRadius,       // Radius
+                DotNetObjectReference.Create(this));
+        }
+    }
+
+    [JSInvokable]
+    public void OnScroll(double scrollProgress, int startIndex)
+    {
+        // Update nur bei größeren Sprüngen um Performance zu optimieren
+        if (Math.Abs(_currentStartIndex - startIndex) >= 1)
+        {
+            _currentStartIndex = startIndex;
+            StateHasChanged();
+        }
+    }
+
+    private ScrollCardItem GetCardForPosition(int position)
+    {
+        if (!Cards.Any()) return new ScrollCardItem { Title = "Keine Karten", Description = "" };
+
+        int cardIndex = (_currentStartIndex + position) % Cards.Count;
+        return Cards[cardIndex];
+    }
+}
+
+<style>
+    .scroll-cards-container {
+        position: relative;
+        width: 100%;
+        overflow: hidden;
+        background: var(--background-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .void {
+        width: 100%;
+        max-width: @(MaxWidth)px;
+        position: relative;
+        aspect-ratio: 1 / 1;
+    }
+
+    .card-list {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        position: relative;
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        z-index: 1;
+    }
+
+        .card-list li {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 100%;
+            transition: transform 0.1s ease-out;
+        }
+
+    .scroll-card {
+        width: @(CardWidth)%;
+        cursor: pointer;
+        transition: transform 0.1s ease-out;
+    }
+
+    .card-content {
+        padding: 16px !important;
+        background: white !important;
+        border-radius: 12px !important;
+        font-size: 14px;
+        color: #535062;
+    }
+
+    .scroll-card:hover .card-content {
+        transform: scale(1.05);
+    }
+
+    .model-name {
+        font-weight: 500 !important;
+        font-size: 18px !important;
+    }
+
+    .center-circle {
+        position: absolute;
+        width: 80px;
+        height: 80px;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        background: #FFFFFF;
+        box-shadow: 0px 18px 36px -18px rgba(12, 5, 46, 0.3), 0px 30px 60px -12px rgba(12, 5, 46, 0.25);
+        border-radius: 50%;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .center-text {
+        text-align: center;
+        padding: 20px;
+    }
+
+    .crop {
+        -webkit-mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 1));
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
+
+    .mask {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 50%;
+        background-position: 100% 50%;
+        background-repeat: no-repeat;
+        background-image: radial-gradient(100% 50% at 100% 50%, rgba(60, 26, 229, 0.25) 0%, rgba(60, 26, 229, 0.247904) 11.79%, rgba(59, 26, 229, 0.241896) 21.38%, rgba(58, 26, 229, 0.2324) 29.12%, rgba(57, 26, 229, 0.219837) 35.34%, rgba(55, 26, 229, 0.20463) 40.37%, rgba(53, 26, 229, 0.1872) 44.56%, rgba(51, 26, 229, 0.16797) 48.24%, rgba(48, 26, 229, 0.147363) 51.76%, rgba(46, 26, 229, 0.1258) 55.44%, rgba(44, 26, 229, 0.103704) 59.63%, rgba(41, 26, 229, 0.0814963) 64.66%, rgba(39, 26, 229, 0.0596) 70.88%, rgba(36, 26, 229, 0.038437) 78.62%, rgba(34, 26, 229, 0.0184296) 88.21%, rgba(32, 26, 229, 0) 100%);
+        z-index: 2;
+    }
+
+        .mask:after {
+            content: "";
+            position: absolute;
+            width: 1px;
+            height: 100%;
+            right: 0;
+            display: block;
+            background-image: linear-gradient(180deg, rgba(60, 26, 229, 0) 0%, #3C1AE5 50%, rgba(60, 26, 229, 0) 100%);
+        }
+
+    .progress-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #3B2ED0, #667eea);
+        z-index: 1000;
+        transform-origin: left;
+        transition: transform 0.1s ease-out;
+    }
+
+    .scroll-area {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 20px;
+        height: 100%;
+        overflow-y: auto;
+        overflow-x: hidden;
+        opacity: 0.3;
+        transition: opacity 0.3s;
+    }
+
+        .scroll-area:hover {
+            opacity: 1;
+        }
+
+    .scroll-content {
+        width: 1px;
+    }
+
+    .scroll-indicator {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        padding: 10px 20px;
+        border-radius: 25px;
+        color: white;
+        z-index: 100;
+    }
+
+    .scroll-area::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .scroll-area::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+    }
+
+    .scroll-area::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 4px;
+    }
+
+        .scroll-area::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.7);
+        }
+</style>

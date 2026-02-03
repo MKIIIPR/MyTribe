@@ -126,7 +126,7 @@
    
 
     // Public property for binding in the UI
-    public TribeProfile Profile
+    public TribeUser Profile
     {
         get => _profile;
         set => _profile = value;
@@ -169,7 +169,7 @@
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
 
-    private TribeProfile _profile = new(); // Initialisierung mit einem Standardwert
+    private TribeUser _profile = new(); // Initialisierung mit einem Standardwert
 
 
     protected override void OnParametersSet()
@@ -183,7 +183,7 @@
         }
         else
         {
-            _profile = new TribeProfile();
+            _profile = new TribeUser();
         }
     }
 

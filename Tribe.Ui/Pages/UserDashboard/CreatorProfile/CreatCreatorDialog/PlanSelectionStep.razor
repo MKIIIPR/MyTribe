@@ -34,8 +34,7 @@ else if (CreatorPlans?.Any() == true)
             <MudItem xs="12" sm="6" md="4">
                 <MudCard Elevation="@(SelectedSubscription.CreatorPlanId == plan.Guid ? 15 : 5)"
                          Class="@GetCardClass(plan)"
-                         Style="@GetCardStyle(plan)"
-                         OnClick="() => SelectPlan(plan)">
+                         Style="@GetCardStyle(plan)">
                     <MudCardHeader>
                         <CardHeaderContent>
                             <MudText Typo="Typo.h5" Align="Align.Center">@plan.Name</MudText>

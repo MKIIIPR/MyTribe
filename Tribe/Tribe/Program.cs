@@ -21,33 +21,64 @@ using Tribe.Services.Hubs;
 using Tribe.Services.ServerServices;
 using Tribe.Services.States;
 
+using TribeApp.Repositories;
+
 var builder = WebApplication.CreateBuilder(args);
 
-#region ClientNonsense
+#region Database Configuration
+builder.Services.AddDbContext<ShopDbContext>(options =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("ShopDbConnection"));
+
+    if (builder.Environment.IsDevelopment())
+    {
+        options.EnableSensitiveDataLogging();
+        options.LogTo(Console.WriteLine, LogLevel.Information);
+    }
+});
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
+    throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(connectionString, sqlOptions =>
+    {
+        sqlOptions.EnableRetryOnFailure(3);
+        sqlOptions.CommandTimeout(30);
+    }));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+#endregion
+
+#region Client Services (für WebAssembly)
+// Diese Services werden auch auf dem Server registriert für SSR/Prerendering
 builder.Services.AddScoped<IUserApiService, UserApiService>();
-builder.Services.AddScoped<IAuthService, SimplifiedAuthService>();
 builder.Services.AddScoped<IApiService, ApiService>();
 builder.Services.AddScoped<IClientApiService, ClientApiService>();
 builder.Services.AddScoped<ISignalRService, SignalRService>();
 builder.Services.AddScoped<ITokenInitializationService, TokenInitializationService>();
 builder.Services.AddScoped<UserState>();
 
+// Auth Service - NUR SimplifiedAuthService verwenden (einheitlicher Flow)
+builder.Services.AddScoped<IAuthService, SimplifiedAuthService>();
+
 builder.Services.AddHttpClient();
 #endregion
 
-#region Controller/ControllerSErvices
-
+#region Server Services
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IOwnProfileService, OwnProfileService>();
-
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddScoped<IAuthNotificationService, AuthNotificationService>();
 #endregion
-// Add MudBlazor services
+
+#region MudBlazor & Controllers
 builder.Services.AddMudServices();
 builder.Services.AddControllers().AddJsonOptions(x =>
 {
     x.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
+#endregion
 
-// Add services to the container.
+#region Blazor Configuration
 builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents()
     .AddAuthenticationStateSerialization();
@@ -55,21 +86,19 @@ builder.Services.AddRazorComponents()
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
+#endregion
 
-// JWT Configuration
+#region Authentication & Authorization
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings["SecretKey"] ?? "YourDefaultSecretKeyThatIsAtLeast32CharactersLongForSecurity!";
 
-// Korrigierte Authentifizierungskonfiguration
 builder.Services.AddAuthentication(options =>
 {
-    // Die Standard-Authentifizierungsschemas werden hier festgelegt
     options.DefaultScheme = IdentityConstants.ApplicationScheme;
     options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
 })
-    .AddIdentityCookies(); // Nur die IdentityCookies hier hinzufügen
+    .AddIdentityCookies();
 
-// Separater Aufruf für AddJwtBearer
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -84,7 +113,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
         };
 
-        // SignalR-spezifische Konfiguration, um JWT-Tokens aus Query-Strings zu lesen
+        // SignalR JWT Token aus Query-String lesen
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
@@ -101,39 +130,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+#endregion
 
-// Controllers and API
-builder.Services.AddControllers();
-
-// Database
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
-    throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
-builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-
-// Identity
+#region Identity
 builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+#endregion
 
-// SignalR
+#region SignalR
 builder.Services.AddSignalR();
+#endregion
 
-// Custom Services
-builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
-builder.Services.AddScoped<IAuthNotificationService, AuthNotificationService>();
-
-// Swagger/OpenAPI
+#region Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Tribe API", Version = "v1" });
 
-    // Add JWT Authentication to Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme.",
@@ -158,10 +175,11 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
+#endregion
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+#region Middleware Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
@@ -191,13 +209,9 @@ app.MapRazorComponents<App>()
     .AddAdditionalAssemblies(typeof(Tribe.Client._Imports).Assembly)
     .AddAdditionalAssemblies(typeof(Tribe.Ui._Imports).Assembly);
 
-// Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();
-
-// API Controllers
 app.MapControllers();
-
-// SignalR Hub
 app.MapHub<AuthHub>("/authHub");
+#endregion
 
 app.Run();

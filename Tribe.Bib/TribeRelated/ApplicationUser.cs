@@ -45,12 +45,13 @@
 
         // === SYSTEM DATEN ===
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public BillingAddress? BillingAddress { get; set; } = new BillingAddress();
 
     }
 
     // 2. TribeProfile - �FFENTLICHE Anzeige-Daten
     // 1. TribeProfile - Basis-Profil
-    public class TribeProfile
+    public class TribeUser
     {
         [Key]
         public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -162,7 +163,7 @@
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation Properties
-        public virtual TribeProfile TribeProfile { get; set; } = null!;
+        public virtual TribeUser TribeProfile { get; set; } = null!;
         public virtual CreatorPlan CreatorPlan { get; set; } = null!;
         public virtual CreatorPlanPricing CreatorPlanPricing { get; set; } = null!;
      
@@ -171,7 +172,7 @@
     }
 
     // 5. CreatorProfile - Erweiterte Creator-Daten
-    public class CreatorProfile : TribeProfile
+    public class CreatorProfile : TribeUser
     {
         public CreatorProfile()
         {
@@ -274,7 +275,7 @@
 
         public string FollowerId { get; set; }
         [ForeignKey(nameof(FollowerId))]
-        public TribeProfile Follower { get; set; }
+        public TribeUser Follower { get; set; }
 
         public string CreatorProfileId { get; set; }
         [ForeignKey(nameof(CreatorProfileId))]
@@ -291,7 +292,8 @@
         [Required]
         [MaxLength(200)]
         public string Title { get; set; }
-
+        public string? PrizeName { get; set; } // Name des Preises
+        public string? EntryRequirement { get; set; } // Beschreibung der Teilnahmebedingungen
         public string? Description { get; set; }
         public string? ImageUrl { get; set; }
 
@@ -332,7 +334,7 @@
 
         public string ProfileId { get; set; }
         [ForeignKey(nameof(ProfileId))]
-        public TribeProfile Profile { get; set; }
+        public TribeUser Profile { get; set; }
 
         public string CreatorTokenId { get; set; }
         [ForeignKey(nameof(CreatorTokenId))]
@@ -377,7 +379,7 @@
 
         public string ProfileId { get; set; }
         [ForeignKey(nameof(ProfileId))]
-        public TribeProfile Profile { get; set; }
+        public TribeUser Profile { get; set; }
 
         // === ENTRY DETAILS ===
         public string EntryType { get; set; } = Constants.EntryTypes.Token; // Token, Follow, Free
@@ -409,7 +411,7 @@
 
         public string ProfileId { get; set; }
         [ForeignKey(nameof(ProfileId))]
-        public TribeProfile Profile { get; set; }
+        public TribeUser Profile { get; set; }
 
         public string EntryId { get; set; }
         [ForeignKey(nameof(EntryId))]

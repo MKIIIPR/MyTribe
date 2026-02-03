@@ -9,10 +9,11 @@ namespace Tribe.Controller.Services
 {
     public interface IOwnProfileService
     {
-        Task<TribeProfile> CreateAsync(TribeProfile profile);
+        Task<TribeUser> CreateAsync(TribeUser profile);
         Task<bool> ExistsAsync(string userId);
-        Task<TribeProfile?> GetOwnProfile(string userId);
-        Task<TribeProfile> UpdateAsync(TribeProfile profile);
+        Task<TribeUser?> GetOwnProfile(string userId);
+        Task<TribeUser> UpdateAsync(TribeUser profile);
+        Task<bool> CheckOutSubscription(CreatorSubscription sub);
     }
     public class OwnProfileService : IOwnProfileService
     {
@@ -26,8 +27,46 @@ namespace Tribe.Controller.Services
             _context = context;
             _logger = logger;
         }
+        public async Task<bool> CheckOutSubscription(CreatorSubscription sub)
+        {
+            if (sub == null)
+                throw new ArgumentNullException(nameof(sub), "CreatorSubscription darf nicht null sein.");
+            if (string.IsNullOrEmpty(sub.TribeProfileId))
+                throw new ArgumentException("ApplicationUserId darf nicht null oder leer sein.", nameof(sub.TribeProfileId));
+            try
+            {
+                // 1. Suche nach dem TribeProfile
+                var profile = await _context.TribeUsers
+                    .FirstOrDefaultAsync(p => p.ApplicationUserId == sub.TribeProfileId);
+                // 2. Wenn kein Profil gefunden wird, erstelle ein neues
+                if (profile == null)
+                {
+                    return false;
+                }
+                // 2.1. Wenn das Profil bereits eine aktive Subscription hat, breche ab
+                // Paymentcheck
 
-        public async Task<TribeProfile?> GetOwnProfile(string userId)
+
+                // 3. Aktualisiere das Profil mit den Daten aus der Subscription
+                sub.TribeProfileId = profile.Id; // Sicherstellen, dass die ID korrekt gesetzt ist
+                profile.ActiveCreatorSubscription = sub;
+                profile.UpdatedAt = DateTime.UtcNow;
+                profile.ActiveCreatorSubscription.StartDate= DateTime.UtcNow; // Setze das Flag für CreatorApplication
+
+
+                _context.TribeUsers.Update(profile);
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("CreatorApplication erfolgreich für User {UserId}", sub.TribeProfileId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fehler bei der CreatorApplication für User {UserId}", sub.TribeProfileId);
+                return false;
+                throw;
+            }
+            return true;
+        }
+        public async Task<TribeUser?> GetOwnProfile(string userId)
         {
             if (string.IsNullOrEmpty(userId))
                 throw new ArgumentException("User ID darf nicht null oder leer sein.", nameof(userId));
@@ -35,7 +74,7 @@ namespace Tribe.Controller.Services
             try
             {
                 // 1. Suche nach dem TribeProfile
-                var profile = await _context.TribeProfiles
+                var profile = await _context.TribeUsers
                     .FirstOrDefaultAsync(p => p.ApplicationUserId == userId);
 
                 // 2. Wenn kein Profil gefunden wird, erstelle ein neues
@@ -50,7 +89,7 @@ namespace Tribe.Controller.Services
                         return null;
                     }
 
-                    profile = new TribeProfile
+                    profile = new TribeUser
                     {
                         ApplicationUserId = userId,
                         // Nutze den UserName oder einen anderen geeigneten Namen aus dem ApplicationUser
@@ -58,7 +97,7 @@ namespace Tribe.Controller.Services
                     };
 
                     // 4. Neues Profil zur Datenbank hinzufügen und speichern
-                    _context.TribeProfiles.Add(profile);
+                    _context.TribeUsers.Add(profile);
                     await _context.SaveChangesAsync();
                 }
 
@@ -73,10 +112,10 @@ namespace Tribe.Controller.Services
         }
         public async Task<bool> ExistsAsync(string userId)
         {
-            return await _context.TribeProfiles.AnyAsync(p => p.Id == userId);
+            return await _context.TribeUsers.AnyAsync(p => p.Id == userId);
         }
 
-        public async Task<TribeProfile> CreateAsync(TribeProfile profile)
+        public async Task<TribeUser> CreateAsync(TribeUser profile)
         {
             if (profile == null)
                 throw new ArgumentNullException(nameof(profile));
@@ -92,7 +131,7 @@ namespace Tribe.Controller.Services
                 profile.CreatedAt = DateTime.UtcNow;
                 profile.UpdatedAt = DateTime.UtcNow;
 
-                _context.TribeProfiles.Add(profile);
+                _context.TribeUsers.Add(profile);
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation("Profil erstellt für User {UserId}", profile.Id);
@@ -105,7 +144,7 @@ namespace Tribe.Controller.Services
             }
         }
 
-        public async Task<TribeProfile> UpdateAsync(TribeProfile profile)
+        public async Task<TribeUser> UpdateAsync(TribeUser profile)
         {
             if (profile == null)
                 throw new ArgumentNullException(nameof(profile));
@@ -113,7 +152,7 @@ namespace Tribe.Controller.Services
             if (string.IsNullOrEmpty(profile.Id))
                 throw new ArgumentException("Profil muss eine ID haben.", nameof(profile));
 
-            var existing = await _context.TribeProfiles.FindAsync(profile.Id);
+            var existing = await _context.TribeUsers.FindAsync(profile.Id);
             if (existing == null)
                 throw new InvalidOperationException($"Profil mit ID '{profile.Id}' wurde nicht gefunden.");
 
@@ -129,7 +168,7 @@ namespace Tribe.Controller.Services
                     existing.AvatarUrl = profile.AvatarUrl; // Andernfalls direkt übernehmen
                 existing.UpdatedAt = DateTime.UtcNow;
 
-                _context.TribeProfiles.Update(existing);
+                _context.TribeUsers.Update(existing);
                 await _context.SaveChangesAsync();
 
                 _logger.LogInformation("Profil aktualisiert für User {UserId}", profile.Id);

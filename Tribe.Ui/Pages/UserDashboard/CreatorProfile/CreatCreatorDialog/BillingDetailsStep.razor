@@ -7,10 +7,6 @@
 {
     <!-- Order Summary -->
     <MudPaper Class="pa-4 mb-6" Elevation="3">
-        <MudText Typo="Typo.h6" Class="mb-3">
-            <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Class="mr-2" />
-            Order Summary
-        </MudText>
         <MudGrid>
             <MudItem xs="12" sm="8">
                 <MudText  ><strong>Plan:</strong> @SelectedPlan.Name</MudText>
@@ -44,10 +40,7 @@
 
     <!-- Billing Address -->
     <MudPaper Class="pa-4" Elevation="2">
-        <MudText Typo="Typo.h6" Class="">
-            <MudIcon Icon="@Icons.Material.Filled.LocationOn" Class="mr-2" />
-            Billing Address
-        </MudText>
+
         <MudGrid>
             <MudItem xs="12" sm="6">
                 <MudTextField @bind-Value="BillingData.FirstName"

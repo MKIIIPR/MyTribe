@@ -1,4 +1,4 @@
-﻿// ===== 4. SERVER AUTH CONTROLLER MIT ENHANCED LOGGING =====
+﻿// ===== AUTH CONTROLLER - VEREINHEITLICHT =====
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -18,19 +18,22 @@ namespace Tribe.Controller
         private readonly IJwtTokenService _jwtTokenService;
         private readonly IAuthNotificationService _authNotificationService;
         private readonly ILogger<AuthController> _logger;
+        private readonly IHostEnvironment _environment;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             IJwtTokenService jwtTokenService,
             IAuthNotificationService authNotificationService,
-            ILogger<AuthController> logger)
+            ILogger<AuthController> logger,
+            IHostEnvironment environment)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _jwtTokenService = jwtTokenService;
             _authNotificationService = authNotificationService;
             _logger = logger;
+            _environment = environment;
         }
 
         [HttpPost("login")]
@@ -39,8 +42,7 @@ namespace Tribe.Controller
             var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
             var userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
 
-            _logger.LogInformation("LOGIN_ATTEMPT: Email={Email}, IP={ClientIp}, UserAgent={UserAgent}",
-                request.Email, clientIp, userAgent);
+            _logger.LogInformation("LOGIN_ATTEMPT: Email={Email}, IP={ClientIp}", request.Email, clientIp);
 
             try
             {
@@ -62,26 +64,18 @@ namespace Tribe.Controller
 
                 var token = _jwtTokenService.GenerateToken(user);
 
-                // Update user
+                // Update last login
                 user.LastLoginAt = DateTime.UtcNow;
                 await _userManager.UpdateAsync(user);
 
-                // Set cookie
-                var cookieOptions = new CookieOptions
-                {
-                    HttpOnly = false,
-                    Secure = HttpContext.Request.IsHttps,
-                    SameSite = SameSiteMode.Strict,
-                    Expires = DateTime.UtcNow.AddHours(24)
-                };
-
-                HttpContext.Response.Cookies.Append("jwt_token", token, cookieOptions);
+                // Cookie setzen - EINZIGE Token-Quelle
+                SetAuthCookie(token);
 
                 // SignalR notification
                 await _authNotificationService.NotifyUserLoggedInAsync(user.Id, user.UserName!);
 
-                _logger.LogInformation("LOGIN_SUCCESS: Email={Email}, UserId={UserId}, TokenLength={TokenLength}, IP={ClientIp}",
-                    request.Email, user.Id, token.Length, clientIp);
+                _logger.LogInformation("LOGIN_SUCCESS: Email={Email}, UserId={UserId}, IP={ClientIp}",
+                    request.Email, user.Id, clientIp);
 
                 return Ok(new LoginResponse
                 {
@@ -93,8 +87,7 @@ namespace Tribe.Controller
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "LOGIN_ERROR: Email={Email}, IP={ClientIp}, Error={ErrorMessage}",
-                    request.Email, clientIp, ex.Message);
+                _logger.LogError(ex, "LOGIN_ERROR: Email={Email}, IP={ClientIp}", request.Email, clientIp);
                 return StatusCode(500, new { message = "An error occurred during login" });
             }
         }
@@ -112,18 +105,13 @@ namespace Tribe.Controller
 
             try
             {
-                // Cookie löschen (nur aktueller Client)
-                HttpContext.Response.Cookies.Delete("jwt_token", new CookieOptions
-                {
-                    Path = "/",
-                    SameSite = SameSiteMode.Strict
-                });
+                // Cookie löschen
+                RemoveAuthCookie();
 
-                // SignalR notification (alle anderen Clients)
+                // SignalR notification
                 if (userId != null && userName != null)
                 {
                     await _authNotificationService.NotifyUserLoggedOutAsync(userId, userName);
-                    _logger.LogInformation("SIGNALR_LOGOUT_SENT: UserId={UserId}, UserName={UserName}", userId, userName);
                 }
 
                 await _signInManager.SignOutAsync();
@@ -166,13 +154,13 @@ namespace Tribe.Controller
 
                 _logger.LogDebug("USER_INFO_SUCCESS: UserId={UserId}, UserName={UserName}", userId, user.UserName);
 
-                return Ok(new
+                return Ok(new UserInfo
                 {
-                    user.Id,
-                    user.UserName,
-                    user.Email,
-                    user.LastLoginAt,
-                    user.IsActive
+                    Id = user.Id,
+                    UserName = user.UserName!,
+                    Email = user.Email!,
+                    LastLoginAt = user.LastLoginAt,
+                    IsActive = user.IsActive
                 });
             }
             catch (Exception ex)
@@ -180,6 +168,42 @@ namespace Tribe.Controller
                 _logger.LogError(ex, "USER_INFO_ERROR: UserId={UserId}", userId);
                 return StatusCode(500, new { message = "An error occurred retrieving user information" });
             }
+        }
+
+        /// <summary>
+        /// Setzt das JWT-Token als Cookie
+        /// </summary>
+        private void SetAuthCookie(string token)
+        {
+            var cookieOptions = new CookieOptions
+            {
+                // In Development: HttpOnly=false für Debugging via JS Console
+                // In Production: HttpOnly=true für XSS-Schutz
+                HttpOnly = !_environment.IsDevelopment(),
+                Secure = HttpContext.Request.IsHttps,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTime.UtcNow.AddHours(24),
+                Path = "/"
+            };
+
+            HttpContext.Response.Cookies.Append("jwt_token", token, cookieOptions);
+            
+            _logger.LogDebug("AUTH_COOKIE_SET: HttpOnly={HttpOnly}, Secure={Secure}, Expires={Expires}",
+                cookieOptions.HttpOnly, cookieOptions.Secure, cookieOptions.Expires);
+        }
+
+        /// <summary>
+        /// Entfernt das JWT-Token Cookie
+        /// </summary>
+        private void RemoveAuthCookie()
+        {
+            HttpContext.Response.Cookies.Delete("jwt_token", new CookieOptions
+            {
+                Path = "/",
+                SameSite = SameSiteMode.Strict
+            });
+
+            _logger.LogDebug("AUTH_COOKIE_REMOVED");
         }
     }
 }

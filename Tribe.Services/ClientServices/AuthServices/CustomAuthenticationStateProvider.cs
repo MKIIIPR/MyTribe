@@ -1,5 +1,4 @@
-﻿
-using Microsoft.AspNetCore.Components.Authorization;
+﻿using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -7,6 +6,10 @@ using Tribe.Services.ClientServices.SimpleAuth;
 
 namespace Tribe.Client.Services;
 
+/// <summary>
+/// Alternative AuthenticationStateProvider - verwendet nur Cookies (kein localStorage)
+/// Wird normalerweise nicht benötigt, da CookieAuthenticationStateProvider verwendet wird
+/// </summary>
 public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 {
     private readonly IJSRuntime _jsRuntime;
@@ -17,7 +20,6 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
         _jsRuntime = jsRuntime;
         _signalRService = signalRService;
 
-        // Subscribe to SignalR events
         _signalRService.UserLoggedIn += OnUserLoggedIn;
         _signalRService.UserLoggedOut += OnUserLoggedOut;
     }
@@ -26,50 +28,55 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     {
         try
         {
-            // Try to get token from localStorage first
-            var token = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "authToken");
-
-            // If not found, try cookie
-            if (string.IsNullOrEmpty(token))
-            {
-                token = await GetTokenFromCookie();
-            }
+            // NUR Cookie verwenden - KEIN localStorage
+            var token = await GetTokenFromCookie();
 
             if (string.IsNullOrEmpty(token) || IsTokenExpired(token))
             {
-                Console.WriteLine("No valid token found - user not authenticated");
-                return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+                return CreateAnonymousState();
             }
 
             var claims = ParseClaimsFromJwt(token);
             var identity = new ClaimsIdentity(claims, "jwt");
             var user = new ClaimsPrincipal(identity);
 
-            Console.WriteLine($"User authenticated: {user.Identity?.Name}");
+            Console.WriteLine($"[Auth] User authenticated: {user.Identity?.Name}");
             return new AuthenticationState(user);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error in GetAuthenticationStateAsync: {ex.Message}");
-            return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            Console.WriteLine($"[Auth] Error: {ex.Message}");
+            return CreateAnonymousState();
         }
     }
 
+    /// <summary>
+    /// Benachrichtigt die UI über erfolgreiche Authentifizierung
+    /// </summary>
     public void NotifyUserAuthentication(string token)
     {
-        var claims = ParseClaimsFromJwt(token);
-        var identity = new ClaimsIdentity(claims, "jwt");
-        var user = new ClaimsPrincipal(identity);
+        try
+        {
+            var claims = ParseClaimsFromJwt(token);
+            var identity = new ClaimsIdentity(claims, "jwt");
+            var user = new ClaimsPrincipal(identity);
 
-        Console.WriteLine($"Notifying user authentication: {user.Identity?.Name}");
-        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(user)));
+            Console.WriteLine($"[Auth] Notifying authentication: {user.Identity?.Name}");
+            NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(user)));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Auth] NotifyUserAuthentication error: {ex.Message}");
+        }
     }
 
+    /// <summary>
+    /// Benachrichtigt die UI über Logout
+    /// </summary>
     public void NotifyUserLogout()
     {
-        Console.WriteLine("Notifying user logout");
-        var anonymousUser = new ClaimsPrincipal(new ClaimsIdentity());
-        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(anonymousUser)));
+        Console.WriteLine("[Auth] Notifying logout");
+        NotifyAuthenticationStateChanged(Task.FromResult(CreateAnonymousState()));
     }
 
     private async Task<string?> GetTokenFromCookie()
@@ -87,18 +94,18 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 
     private void OnUserLoggedIn(string userId, string userName)
     {
-        Console.WriteLine($"SignalR Event: User {userName} logged in");
-        // Refresh auth state when receiving SignalR notification
+        Console.WriteLine($"[SignalR] User logged in: {userName}");
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
 
     private void OnUserLoggedOut(string userId, string userName)
     {
-        Console.WriteLine($"SignalR Event: User {userName} logged out");
-        // Clear tokens and auth state
-        _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "authToken");
+        Console.WriteLine($"[SignalR] User logged out: {userName}");
         NotifyUserLogout();
     }
+
+    private static AuthenticationState CreateAnonymousState()
+        => new(new ClaimsPrincipal(new ClaimsIdentity()));
 
     private static bool IsTokenExpired(string token)
     {
@@ -106,7 +113,7 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
         {
             var handler = new JwtSecurityTokenHandler();
             var jsonToken = handler.ReadJwtToken(token);
-            return jsonToken.ValidTo < DateTime.UtcNow.AddMinutes(-1); // 1 minute buffer
+            return jsonToken.ValidTo < DateTime.UtcNow.AddMinutes(-1);
         }
         catch
         {
@@ -116,8 +123,15 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 
     private static IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
     {
-        var handler = new JwtSecurityTokenHandler();
-        var token = handler.ReadJwtToken(jwt);
-        return token.Claims;
+        try
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var token = handler.ReadJwtToken(jwt);
+            return token.Claims;
+        }
+        catch
+        {
+            return Enumerable.Empty<Claim>();
+        }
     }
 }

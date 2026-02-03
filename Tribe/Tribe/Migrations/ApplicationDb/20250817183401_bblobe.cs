@@ -5,14 +5,51 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
 
-namespace Tribe.Migrations
+namespace Tribe.Migrations.ApplicationDb
 {
     /// <inheritdoc />
-    public partial class blobddddd : Migration
+    public partial class bblobe : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "BillingAddress",
+                columns: table => new
+                {
+                    Guid = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    FirstName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    LastName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    City = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PostalCode = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Country = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BillingAddress", x => x.Guid);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CreatorPlan",
+                columns: table => new
+                {
+                    Guid = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TokenMenge = table.Column<int>(type: "int", nullable: false),
+                    FeaturesJson = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CanUploadDigitalContent = table.Column<bool>(type: "bit", nullable: false),
+                    HaveShopItems = table.Column<bool>(type: "bit", nullable: false),
+                    CanCreateEvents = table.Column<bool>(type: "bit", nullable: false),
+                    CanCreateRaffles = table.Column<bool>(type: "bit", nullable: false),
+                    CanUseWindowsApp = table.Column<bool>(type: "bit", nullable: false),
+                    Aktiv = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CreatorPlan", x => x.Guid);
+                });
+
             migrationBuilder.CreateTable(
                 name: "CreatorPlans",
                 columns: table => new
@@ -21,11 +58,34 @@ namespace Tribe.Migrations
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     TokenMenge = table.Column<int>(type: "int", nullable: false),
                     FeaturesJson = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CanUploadDigitalContent = table.Column<bool>(type: "bit", nullable: false),
+                    HaveShopItems = table.Column<bool>(type: "bit", nullable: false),
+                    CanCreateEvents = table.Column<bool>(type: "bit", nullable: false),
+                    CanCreateRaffles = table.Column<bool>(type: "bit", nullable: false),
+                    CanUseWindowsApp = table.Column<bool>(type: "bit", nullable: false),
                     Aktiv = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_CreatorPlans", x => x.Guid);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PaymentInfo",
+                columns: table => new
+                {
+                    Guid = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    PaymentMethod = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CardNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CardHolderName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ExpiryDate = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CvvCode = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    AcceptTerms = table.Column<bool>(type: "bit", nullable: false),
+                    AcceptRecurring = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PaymentInfo", x => x.Guid);
                 });
 
             migrationBuilder.CreateTable(
@@ -43,7 +103,7 @@ namespace Tribe.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "TribeProfiles",
+                name: "TribeUsers",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
@@ -55,7 +115,6 @@ namespace Tribe.Migrations
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     IsCreator = table.Column<bool>(type: "bit", nullable: false),
-                    CreatorPlanId = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Discriminator = table.Column<string>(type: "nvarchar(21)", maxLength: 21, nullable: false),
                     CreatorName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     ImageTemplateUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -77,11 +136,11 @@ namespace Tribe.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_TribeProfiles", x => x.Id);
+                    table.PrimaryKey("PK_TribeUsers", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Users",
+                name: "AspNetUsers",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
@@ -109,6 +168,7 @@ namespace Tribe.Migrations
                     PrivacyPolicyAccepted = table.Column<bool>(type: "bit", nullable: false),
                     PrivacyPolicyAcceptedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    BillingAddressGuid = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -126,7 +186,34 @@ namespace Tribe.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Users", x => x.Id);
+                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AspNetUsers_BillingAddress_BillingAddressGuid",
+                        column: x => x.BillingAddressGuid,
+                        principalTable: "BillingAddress",
+                        principalColumn: "Guid");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CreatorPlanPricing",
+                columns: table => new
+                {
+                    Guid = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CreatorPlanGuid = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Duration = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ValueUSD = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ValueEuro = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ValueGbPound = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CreatorPlanPricing", x => x.Guid);
+                    table.ForeignKey(
+                        name: "FK_CreatorPlanPricing_CreatorPlan_CreatorPlanGuid",
+                        column: x => x.CreatorPlanGuid,
+                        principalTable: "CreatorPlan",
+                        principalColumn: "Guid",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -186,9 +273,9 @@ namespace Tribe.Migrations
                 {
                     table.PrimaryKey("PK_AffiliatePartner", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_AffiliatePartner_TribeProfiles_CreatorProfileId",
+                        name: "FK_AffiliatePartner_TribeUsers_CreatorProfileId",
                         column: x => x.CreatorProfileId,
-                        principalTable: "TribeProfiles",
+                        principalTable: "TribeUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -208,9 +295,9 @@ namespace Tribe.Migrations
                 {
                     table.PrimaryKey("PK_CreatorPlacement", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_CreatorPlacement_TribeProfiles_CreatorProfileId",
+                        name: "FK_CreatorPlacement_TribeUsers_CreatorProfileId",
                         column: x => x.CreatorProfileId,
-                        principalTable: "TribeProfiles",
+                        principalTable: "TribeUsers",
                         principalColumn: "Id");
                 });
 
@@ -232,9 +319,9 @@ namespace Tribe.Migrations
                 {
                     table.PrimaryKey("PK_CreatorTokens", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_CreatorTokens_TribeProfiles_CreatorProfileId",
+                        name: "FK_CreatorTokens_TribeUsers_CreatorProfileId",
                         column: x => x.CreatorProfileId,
-                        principalTable: "TribeProfiles",
+                        principalTable: "TribeUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -253,15 +340,15 @@ namespace Tribe.Migrations
                     table.PrimaryKey("PK_ProfileFollows", x => x.Id);
                     table.CheckConstraint("CK_ProfileFollow_NotSelf", "[FollowerId] <> [CreatorProfileId]");
                     table.ForeignKey(
-                        name: "FK_ProfileFollows_TribeProfiles_CreatorProfileId",
+                        name: "FK_ProfileFollows_TribeUsers_CreatorProfileId",
                         column: x => x.CreatorProfileId,
-                        principalTable: "TribeProfiles",
+                        principalTable: "TribeUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_ProfileFollows_TribeProfiles_FollowerId",
+                        name: "FK_ProfileFollows_TribeUsers_FollowerId",
                         column: x => x.FollowerId,
-                        principalTable: "TribeProfiles",
+                        principalTable: "TribeUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -293,9 +380,9 @@ namespace Tribe.Migrations
                     table.PrimaryKey("PK_Raffles", x => x.Id);
                     table.CheckConstraint("CK_Raffle_ValidDateRange", "[EndDate] > [StartDate]");
                     table.ForeignKey(
-                        name: "FK_Raffles_TribeProfiles_CreatorProfileId",
+                        name: "FK_Raffles_TribeUsers_CreatorProfileId",
                         column: x => x.CreatorProfileId,
-                        principalTable: "TribeProfiles",
+                        principalTable: "TribeUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -314,9 +401,9 @@ namespace Tribe.Migrations
                 {
                     table.PrimaryKey("PK_UserClaims", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_UserClaims_Users_UserId",
+                        name: "FK_UserClaims_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalTable: "Users",
+                        principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -334,9 +421,9 @@ namespace Tribe.Migrations
                 {
                     table.PrimaryKey("PK_UserLogins", x => new { x.LoginProvider, x.ProviderKey });
                     table.ForeignKey(
-                        name: "FK_UserLogins_Users_UserId",
+                        name: "FK_UserLogins_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalTable: "Users",
+                        principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -352,15 +439,15 @@ namespace Tribe.Migrations
                 {
                     table.PrimaryKey("PK_UserRoles", x => new { x.UserId, x.RoleId });
                     table.ForeignKey(
-                        name: "FK_UserRoles_Roles_RoleId",
-                        column: x => x.RoleId,
-                        principalTable: "Roles",
+                        name: "FK_UserRoles_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_UserRoles_Users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "Users",
+                        name: "FK_UserRoles_Roles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "Roles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -378,9 +465,70 @@ namespace Tribe.Migrations
                 {
                     table.PrimaryKey("PK_UserTokens", x => new { x.UserId, x.LoginProvider, x.Name });
                     table.ForeignKey(
-                        name: "FK_UserTokens_Users_UserId",
+                        name: "FK_UserTokens_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalTable: "Users",
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CreatorSubscription",
+                columns: table => new
+                {
+                    Guid = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    TribeProfileId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CreatorPlanId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CreatorPlanPricingId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Currency = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SubValue = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Duration = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    IsPaid = table.Column<bool>(type: "bit", nullable: false),
+                    PaymentStatus = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PaymentMethod = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    TransactionId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    LastPaymentDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    NextPaymentDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    AutoRenew = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    BillingAddressGuid = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    PaymentInfoGuid = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CreatorSubscription", x => x.Guid);
+                    table.ForeignKey(
+                        name: "FK_CreatorSubscription_BillingAddress_BillingAddressGuid",
+                        column: x => x.BillingAddressGuid,
+                        principalTable: "BillingAddress",
+                        principalColumn: "Guid",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_CreatorSubscription_CreatorPlanPricing_CreatorPlanPricingId",
+                        column: x => x.CreatorPlanPricingId,
+                        principalTable: "CreatorPlanPricing",
+                        principalColumn: "Guid",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_CreatorSubscription_CreatorPlan_CreatorPlanId",
+                        column: x => x.CreatorPlanId,
+                        principalTable: "CreatorPlan",
+                        principalColumn: "Guid",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_CreatorSubscription_PaymentInfo_PaymentInfoGuid",
+                        column: x => x.PaymentInfoGuid,
+                        principalTable: "PaymentInfo",
+                        principalColumn: "Guid",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_CreatorSubscription_TribeUsers_TribeProfileId",
+                        column: x => x.TribeProfileId,
+                        principalTable: "TribeUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -405,9 +553,9 @@ namespace Tribe.Migrations
                         principalTable: "CreatorTokens",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_ProfileTokenHoldings_TribeProfiles_ProfileId",
+                        name: "FK_ProfileTokenHoldings_TribeUsers_ProfileId",
                         column: x => x.ProfileId,
-                        principalTable: "TribeProfiles",
+                        principalTable: "TribeUsers",
                         principalColumn: "Id");
                 });
 
@@ -444,9 +592,9 @@ namespace Tribe.Migrations
                         principalTable: "Raffles",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_RaffleEntries_TribeProfiles_ProfileId",
+                        name: "FK_RaffleEntries_TribeUsers_ProfileId",
                         column: x => x.ProfileId,
-                        principalTable: "TribeProfiles",
+                        principalTable: "TribeUsers",
                         principalColumn: "Id");
                 });
 
@@ -512,19 +660,19 @@ namespace Tribe.Migrations
                         principalTable: "Raffles",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_RaffleWinners_TribeProfiles_ProfileId",
+                        name: "FK_RaffleWinners_TribeUsers_ProfileId",
                         column: x => x.ProfileId,
-                        principalTable: "TribeProfiles",
+                        principalTable: "TribeUsers",
                         principalColumn: "Id");
                 });
 
             migrationBuilder.InsertData(
                 table: "CreatorPlans",
-                columns: new[] { "Guid", "Aktiv", "FeaturesJson", "Name", "TokenMenge" },
+                columns: new[] { "Guid", "Aktiv", "CanCreateEvents", "CanCreateRaffles", "CanUploadDigitalContent", "CanUseWindowsApp", "FeaturesJson", "HaveShopItems", "Name", "TokenMenge" },
                 values: new object[,]
                 {
-                    { "basic-plan-guid-001", true, "{\"maxProjects\":1,\"support\":\"email\"}", "Basic Plan", 10000 },
-                    { "pro-plan-guid-002", true, "{\"maxProjects\":10,\"support\":\"priority\"}", "Pro Plan", 50000 }
+                    { "basic-plan-guid-001", true, true, true, true, true, "{\"maxProjects\":1,\"support\":\"email\"}", true, "Basic Plan", 10000 },
+                    { "pro-plan-guid-002", true, true, true, true, true, "{\"maxProjects\":10,\"support\":\"priority\"}", true, "Pro Plan", 50000 }
                 });
 
             migrationBuilder.InsertData(
@@ -544,14 +692,62 @@ namespace Tribe.Migrations
                 column: "CreatorProfileId");
 
             migrationBuilder.CreateIndex(
+                name: "EmailIndex",
+                table: "AspNetUsers",
+                column: "NormalizedEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_BillingAddressGuid",
+                table: "AspNetUsers",
+                column: "BillingAddressGuid");
+
+            migrationBuilder.CreateIndex(
+                name: "UserNameIndex",
+                table: "AspNetUsers",
+                column: "NormalizedUserName",
+                unique: true,
+                filter: "[NormalizedUserName] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CreatorPlacement_CreatorProfileId",
                 table: "CreatorPlacement",
                 column: "CreatorProfileId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CreatorPlanPricing_CreatorPlanGuid",
+                table: "CreatorPlanPricing",
+                column: "CreatorPlanGuid");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CreatorPlanPricings_CreatorPlanGuid",
                 table: "CreatorPlanPricings",
                 column: "CreatorPlanGuid");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CreatorSubscription_BillingAddressGuid",
+                table: "CreatorSubscription",
+                column: "BillingAddressGuid");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CreatorSubscription_CreatorPlanId",
+                table: "CreatorSubscription",
+                column: "CreatorPlanId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CreatorSubscription_CreatorPlanPricingId",
+                table: "CreatorSubscription",
+                column: "CreatorPlanPricingId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CreatorSubscription_PaymentInfoGuid",
+                table: "CreatorSubscription",
+                column: "PaymentInfoGuid");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CreatorSubscription_TribeProfileId",
+                table: "CreatorSubscription",
+                column: "TribeProfileId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_CreatorTokens_CreatorProfileId_TokenName",
@@ -642,21 +838,21 @@ namespace Tribe.Migrations
                 filter: "[NormalizedName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TribeProfiles_ApplicationUserId",
-                table: "TribeProfiles",
+                name: "IX_TribeUsers_ApplicationUserId",
+                table: "TribeUsers",
                 column: "ApplicationUserId",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_TribeProfiles_CreatorName",
-                table: "TribeProfiles",
+                name: "IX_TribeUsers_CreatorName",
+                table: "TribeUsers",
                 column: "CreatorName",
                 unique: true,
                 filter: "[CreatorName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_TribeProfiles_DisplayName",
-                table: "TribeProfiles",
+                name: "IX_TribeUsers_DisplayName",
+                table: "TribeUsers",
                 column: "DisplayName");
 
             migrationBuilder.CreateIndex(
@@ -673,18 +869,6 @@ namespace Tribe.Migrations
                 name: "IX_UserRoles_RoleId",
                 table: "UserRoles",
                 column: "RoleId");
-
-            migrationBuilder.CreateIndex(
-                name: "EmailIndex",
-                table: "Users",
-                column: "NormalizedEmail");
-
-            migrationBuilder.CreateIndex(
-                name: "UserNameIndex",
-                table: "Users",
-                column: "NormalizedUserName",
-                unique: true,
-                filter: "[NormalizedUserName] IS NOT NULL");
         }
 
         /// <inheritdoc />
@@ -698,6 +882,9 @@ namespace Tribe.Migrations
 
             migrationBuilder.DropTable(
                 name: "CreatorPlanPricings");
+
+            migrationBuilder.DropTable(
+                name: "CreatorSubscription");
 
             migrationBuilder.DropTable(
                 name: "ProfileFollows");
@@ -730,13 +917,22 @@ namespace Tribe.Migrations
                 name: "CreatorPlans");
 
             migrationBuilder.DropTable(
+                name: "CreatorPlanPricing");
+
+            migrationBuilder.DropTable(
+                name: "PaymentInfo");
+
+            migrationBuilder.DropTable(
                 name: "RaffleEntries");
 
             migrationBuilder.DropTable(
                 name: "Roles");
 
             migrationBuilder.DropTable(
-                name: "Users");
+                name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "CreatorPlan");
 
             migrationBuilder.DropTable(
                 name: "CreatorTokens");
@@ -745,7 +941,10 @@ namespace Tribe.Migrations
                 name: "Raffles");
 
             migrationBuilder.DropTable(
-                name: "TribeProfiles");
+                name: "BillingAddress");
+
+            migrationBuilder.DropTable(
+                name: "TribeUsers");
         }
     }
 }

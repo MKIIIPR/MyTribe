@@ -3,13 +3,13 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Tribe.Bib.Models.TribeRelated;
 using Tribe.Controller;
-using Tribe.Controller.Services; // Annahme: Dein Profil-Service
+using Tribe.Controller.Services;
 
 namespace Tribe.Controller
 {
     [ApiController]
     [Route("api/own")]
-    [Authorize] // 🔐 Nur authentifizierte Benutzer
+    [Authorize]
     public class OwnProfileController : ControllerBase
     {
         private readonly IOwnProfileService _profileService;
@@ -21,12 +21,8 @@ namespace Tribe.Controller
             _logger = logger;
         }
 
-        /// <summary>
-        /// Holt das eigene TribeProfile
-        /// GET: /api/own/state
-        /// </summary>
         [HttpGet("state")]
-        public async Task<ActionResult<TribeProfile>> GetOwnProfile()
+        public async Task<ActionResult<TribeUser>> GetOwnProfile()
         {
             var userId = GetCurrentUserId();
             if (string.IsNullOrEmpty(userId))
@@ -45,12 +41,8 @@ namespace Tribe.Controller
             return Ok(profile);
         }
 
-        /// <summary>
-        /// Erstellt ein neues TribeProfile (für den aktuellen Benutzer)
-        /// POST: /api/own/state
-        /// </summary>
-        [HttpPost("state")]
-        public async Task<ActionResult<TribeProfile>> CreateOwnProfile([FromBody] TribeProfile profile)
+        [HttpPost("application")]
+        public async Task<ActionResult<TribeUser>> CreatorApplication([FromBody] CreatorSubscription sub)
         {
             var userId = GetCurrentUserId();
             if (string.IsNullOrEmpty(userId))
@@ -58,8 +50,34 @@ namespace Tribe.Controller
                 return Unauthorized();
             }
 
-            // Sicherstellen, dass das Profil dem aktuellen User zugeordnet wird
-            profile.Id = userId; // oder eine andere Profil-ID, aber User-Zuordnung klar
+            // ⚠️ Überschreibe die ID aus der Anfrage mit der UserID aus den Claims
+            sub.TribeProfileId = userId;
+
+            var success = await _profileService.CheckOutSubscription(sub);
+            if (!success)
+            {
+                return BadRequest(new { Message = "Creator-Anwendung konnte nicht verarbeitet werden." });
+            }
+
+            var profile = await _profileService.GetOwnProfile(userId);
+            if (profile == null)
+            {
+                return NotFound(new { Message = "Profil nicht gefunden." });
+            }
+
+            return Ok(profile);
+        }
+
+        [HttpPost("state")]
+        public async Task<ActionResult<TribeUser>> CreateOwnProfile([FromBody] TribeUser profile)
+        {
+            var userId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            profile.Id = userId;
 
             try
             {
@@ -74,12 +92,8 @@ namespace Tribe.Controller
             }
         }
 
-        /// <summary>
-        /// Aktualisiert das eigene TribeProfile
-        /// PUT: /api/own/update
-        /// </summary>
         [HttpPut("update")]
-        public async Task<ActionResult<TribeProfile>> UpdateOwnProfile([FromBody] TribeProfile profile)
+        public async Task<ActionResult<TribeUser>> UpdateOwnProfile([FromBody] TribeUser profile)
         {
             var userId = GetCurrentUserId();
             if (string.IsNullOrEmpty(userId))
@@ -93,11 +107,10 @@ namespace Tribe.Controller
                 return NotFound(new { Message = "Profil existiert nicht. Bitte erstellen." });
             }
 
-            // 🔒 Sicherstellen: Nur das Profil des aktuellen Users wird geändert
             if (profile.ApplicationUserId != userId)
             {
                 _logger.LogWarning("User {UserId} versucht, Profil mit ID {ProfileId} zu ändern", userId, profile.Id);
-                return Forbid(); // 🔥 Verboten!
+                return Forbid();
             }
 
             try
@@ -113,11 +126,10 @@ namespace Tribe.Controller
             }
         }
 
-        // Hilfsmethode: Extrahiere die User-ID aus den Claims
         private string? GetCurrentUserId()
         {
             return User.FindFirstValue(ClaimTypes.NameIdentifier)
-                   ?? User.FindFirstValue("sub"); // fallback für JWT
+                   ?? User.FindFirstValue("sub");
         }
     }
 }

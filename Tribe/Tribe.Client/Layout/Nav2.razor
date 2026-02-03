@@ -28,23 +28,14 @@
         <Authorized>
             <MudNavLink Href="Account/Manage" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">@context.User.Identity?.Name</MudNavLink>
 
-            <!-- Server Logout (Form) -->
-            <form action="Account/Logout" method="post">
-                <AntiforgeryToken />
-                <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                <button type="submit" class="mud-nav-link mud-ripple">
-                    <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Info" Class="mr-3"></MudIcon> Server Logout
-                </button>
-            </form>
-
-            <!-- Client Logout (Button) -->
-            <MudButton Class="mud-nav-link mud-ripple" OnClick="ClientLogout" Style="text-align: left; width: 100%;">
-                <MudIcon Icon="@Icons.Material.Filled.ExitToApp" Color="Color.Warning" Class="mr-3"></MudIcon> Client Logout
-            </MudButton>
+            <!-- Logout Button - ruft die Logout-Seite direkt auf -->
+            <MudNavLink Href="@GetLogoutUrl()" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Logout" ForceLoad="true">
+                Abmelden
+            </MudNavLink>
         </Authorized>
         <NotAuthorized>
-            <MudNavLink Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">Register</MudNavLink>
-            <MudNavLink Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">Login</MudNavLink>
+            <MudNavLink Href="Account/Register" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Person">Registrieren</MudNavLink>
+            <MudNavLink Href="Account/Login" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Password">Anmelden</MudNavLink>
         </NotAuthorized>
     </AuthorizeView>
 </MudNavMenu>
@@ -64,22 +55,10 @@
         StateHasChanged();
     }
 
-    private async Task ClientLogout()
+    private string GetLogoutUrl()
     {
-        try
-        {
-            var success = await AuthService.LogoutAsync();
-            if (success && AuthStateProvider is CustomAuthenticationStateProvider customProvider)
-            {
-                customProvider.NotifyUserLogout();
-                NavigationManager.NavigateTo("/");
-            }
-        }
-        catch (Exception)
-        {
-            // Handle error if needed
-            NavigationManager.NavigateTo("/");
-        }
+        var returnUrl = Uri.EscapeDataString(currentUrl ?? "/");
+        return $"Account/Logout?ReturnUrl={returnUrl}";
     }
 
     public void Dispose()

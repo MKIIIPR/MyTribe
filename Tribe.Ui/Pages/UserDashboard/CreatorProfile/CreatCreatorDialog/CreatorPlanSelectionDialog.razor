@@ -1,19 +1,20 @@
-﻿@using Microsoft.AspNetCore.Components
+﻿@page "/creator-plan"
+@using Microsoft.AspNetCore.Components
 @using Microsoft.Extensions.Logging
 @using MudBlazor
 @using System.Text.Json
 @using Tribe.Client.Services
+@using Tribe.Bib.Models.TribeRelated
 @using static Tribe.Bib.CommunicationModels.ComModels
 @inject ILogger<CreatorPlanSelectionDialog> _logger
 @inject HttpClient _client
 @inject IDialogService DialogService
+@inject IUserApiService _user
 
 <MudDialog Style="max-width: 1000px;">
     <DialogContent>
         <MudContainer Class="mt-4">
-            <!-- Stepper Navigation -->
-            <MudStepper @ref="stepper"Class="mb-6"                        >
-
+            <MudStepper @ref="stepper" Class="mb-6" step @bind-ActiveIndex="CurrentStep">
                 <MudStep Title="Choose Plan">
                     <PlanSelectionStep CreatorPlans="@CreatorPlans"
                                        SelectedSubscription="@CreatorApplication"
@@ -31,13 +32,14 @@
                 </MudStep>
 
                 <MudStep Title="Payment">
-                    <PaymentStep @ref="paymentStep"
-                                 PaymentData="@CreatorApplication.PaymentInfo"
-                                 SelectedPlan="@CreatorApplication.CreatorPlan"
-                                 SelectedCurrency="@CreatorApplication.Currency"
-                                 OnPaymentDataChanged="@OnPaymentDataChanged" />
+                    <ChildContent>
+                        <PaymentStep @ref="paymentStep"
+                                     PaymentData="@CreatorApplication.PaymentInfo"
+                                     SelectedPlan="@CreatorApplication.CreatorPlan"
+                                     SelectedCurrency="@CreatorApplication.Currency"
+                                     OnPaymentDataChanged="@OnPaymentDataChanged" />
+                    </ChildContent>
                 </MudStep>
-
             </MudStepper>
         </MudContainer>
     </DialogContent>
@@ -48,18 +50,25 @@
 
         <MudSpacer />
 
+        @if (CurrentStep == 2)
+        {
+            <MudButton OnClick="SendCreatorApplication" StartIcon="@Icons.Material.Filled.Check">
+                Become Creator
+            </MudButton>
+        }
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
-    [Parameter] public TribeProfile TribeProfile { get; set; } = new();
+    [Parameter] public TribeUser TribeProfile { get; set; } = new();
 
-    private MudStepper stepper = default!;
+    private MudStepper? stepper;
+
     private BillingDetailsStep billingStep = default!;
     private PaymentStep paymentStep = default!;
-
     public CreatorSubscription CreatorApplication { get; set; } = new();
+
     private List<CreatorPlan>? CreatorPlans { get; set; } = new List<CreatorPlan>();
     private bool IsLoading { get; set; } = true;
     private bool IsProcessing { get; set; } = false;
@@ -67,11 +76,14 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Initialize CreatorApplication with TribeProfile
         CreatorApplication.TribeProfile = TribeProfile;
         CreatorApplication.TribeProfileId = TribeProfile.Id;
-
         await LoadCreatorPlans();
+    }
+
+    private async Task SendCreatorApplication()
+    {
+        // Your logic here
     }
 
     private async Task LoadCreatorPlans()
@@ -79,7 +91,7 @@
         try
         {
             IsLoading = true;
-            var response = await _client.GetAsync($"api/CreatorPlan");
+            var response = await _client.GetAsync($"api/Creator");
 
             if (response.IsSuccessStatusCode)
             {
@@ -105,18 +117,12 @@
         }
     }
 
-    // Event Handlers
     private async Task HandleSubscriptionChange(CreatorSubscription subscription)
     {
         CreatorApplication = subscription;
-
-        // Ensure TribeProfile connection remains intact
         CreatorApplication.TribeProfile = TribeProfile;
         CreatorApplication.TribeProfileId = TribeProfile.Id;
-
-        // Calculate SubValue based on selected pricing and currency
         UpdateSubscriptionValue();
-
         StateHasChanged();
     }
 
@@ -146,14 +152,6 @@
         StateHasChanged();
     }
 
-    // Navigation Logic
-    private void OnActiveStepChanged(int step)
-    {
-        CurrentStep = step;
-        StateHasChanged();
-    }
-
-  
     private bool CanProceedToNextStep()
     {
         return CurrentStep switch
@@ -176,6 +174,11 @@
                !IsProcessing;
     }
 
+    private async Task ApplySub()
+    {
+        // Your logic here
+    }
+
     private async Task Confirm()
     {
         if (!CanConfirm()) return;
@@ -183,16 +186,13 @@
         try
         {
             IsProcessing = true;
-
-            // Finalize subscription data before API call
             CreatorApplication.StartDate = DateTime.UtcNow;
             CreatorApplication.CreatedAt = DateTime.UtcNow;
             CreatorApplication.UpdatedAt = DateTime.UtcNow;
             CreatorApplication.PaymentStatus = "Pending";
-            CreatorApplication.IsActive = false; // Will be activated after payment
+            CreatorApplication.IsActive = false;
             CreatorApplication.IsPaid = false;
 
-            // Calculate next payment date
             CreatorApplication.NextPaymentDate = CreatorApplication.Duration switch
             {
                 "Monthly" => DateTime.UtcNow.AddMonths(1),
@@ -201,7 +201,6 @@
                 _ => DateTime.UtcNow.AddMonths(1)
             };
 
-            // Send to API for processing
             var response = await _client.GetAsync("api/CreatorSubscription");
 
             if (response.IsSuccessStatusCode)
@@ -216,13 +215,11 @@
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
                 _logger?.LogError("Subscription creation failed: {StatusCode} - {ErrorContent}", response.StatusCode, errorContent);
-                // TODO: Show error message to user
             }
         }
         catch (Exception ex)
         {
             _logger?.LogError(ex, "Error confirming subscription: {Message}", ex.Message);
-            // TODO: Show error message to user
         }
         finally
         {

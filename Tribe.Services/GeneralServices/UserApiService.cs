@@ -10,9 +10,9 @@ namespace Tribe.Client.Services
 
     public interface IUserApiService
     {
-        Task<TribeProfile> CreateProfileAsync(TribeProfile profile);
-        Task<TribeProfile?> GetProfileAsync();
-        Task<TribeProfile?> UpdateAsync(TribeProfile data);
+        Task<TribeUser> CreateProfileAsync(TribeUser profile);
+        Task<TribeUser?> GetProfileAsync();
+        Task<TribeUser?> UpdateAsync(TribeUser data);
     }
     public class UserApiService : IUserApiService
     {
@@ -27,7 +27,7 @@ namespace Tribe.Client.Services
             _httpClient = httpClient ?? GetHttpClientFromApiService();
         }
 
-        public async Task<TribeProfile?> GetProfileAsync()
+        public async Task<TribeUser?> GetProfileAsync()
         {
             try
             {
@@ -38,7 +38,7 @@ namespace Tribe.Client.Services
                 {
                     var responseJson = await response.Content.ReadAsStringAsync();
                     var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-                    return JsonSerializer.Deserialize<TribeProfile>(responseJson, options);
+                    return JsonSerializer.Deserialize<TribeUser>(responseJson, options);
                 }
                 else
                 {
@@ -53,10 +53,7 @@ namespace Tribe.Client.Services
                 return default;
             }
         }
-
-
-
-        public async Task<TribeProfile> CreateProfileAsync(TribeProfile profile)
+        public async Task<TribeUser> CreateProfileAsync(TribeUser profile)
         {
             try
             {
@@ -75,7 +72,7 @@ namespace Tribe.Client.Services
                 if (response.IsSuccessStatusCode)
                 {
                     var responseJson = await response.Content.ReadAsStringAsync();
-                    return JsonSerializer.Deserialize<TribeProfile>(responseJson, options);
+                    return JsonSerializer.Deserialize<TribeUser>(responseJson, options);
                 }
                 else
                 {
@@ -86,12 +83,11 @@ namespace Tribe.Client.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "CreateAsync failed for {EntityType}", typeof(TribeProfile).Name);
+                _logger?.LogError(ex, "CreateAsync failed for {EntityType}", typeof(TribeUser).Name);
                 return default;
             }
         }
-
-        public async Task<TribeProfile?> UpdateAsync(TribeProfile data)
+        public async Task<TribeUser?> UpdateAsync(TribeUser data)
         {
             try
             {
@@ -109,7 +105,7 @@ namespace Tribe.Client.Services
                 if (response.IsSuccessStatusCode)
                 {
                     var responseJson = await response.Content.ReadAsStringAsync();
-                    return JsonSerializer.Deserialize<TribeProfile>(responseJson, options);
+                    return JsonSerializer.Deserialize<TribeUser>(responseJson, options);
                 }
                 else
                 {
@@ -120,12 +116,10 @@ namespace Tribe.Client.Services
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "UpdateAsync failed for {EntityType} with id {Id}", typeof(TribeProfile).Name, data.Id);
+                _logger?.LogError(ex, "UpdateAsync failed for {EntityType} with id {Id}", typeof(TribeUser).Name, data.Id);
                 return default;
             }
         }
-
-
         private HttpClient GetHttpClientFromApiService()
         {
             var field = _apiService.GetType().GetField("_httpClient",

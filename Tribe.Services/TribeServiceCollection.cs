@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Tribe.Client.Services;
 using Tribe.Services.ClientServices;
+using Tribe.Services.ClientServices.ShopServices;
 using Tribe.Services.ClientServices.SimpleAuth;
 
 namespace Tribe.Services
@@ -23,7 +24,7 @@ namespace Tribe.Services
             });
             services.AddScoped<IClientApiService, ClientApiService>();
             
-            
+            services.AddScoped<IProductClientService, ProductClientService>();
             services.AddScoped<IApiService, ApiService>();
             services.AddScoped<IAuthService, SimplifiedAuthService>();
             services.AddScoped<ISignalRService, SignalRService>();

@@ -6,12 +6,12 @@ namespace YourProject.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class CreatorPlanController : ControllerBase
+public class CreatorController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
-    private readonly ILogger<CreatorPlanController> _logger;
+    private readonly ILogger<CreatorController> _logger;
 
-    public CreatorPlanController(ApplicationDbContext context, ILogger<CreatorPlanController> logger)
+    public CreatorController(ApplicationDbContext context, ILogger<CreatorController> logger)
     {
         _context = context;
         _logger = logger;

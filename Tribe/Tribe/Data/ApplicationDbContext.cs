@@ -10,7 +10,7 @@ namespace Tribe.Data
     public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
     {
         // === DbSet-Eigenschaften bleiben unverändert ===
-        public DbSet<TribeProfile> TribeProfiles { get; set; }
+        public DbSet<TribeUser> TribeUsers { get; set; }
         public DbSet<CreatorProfile> CreatorProfiles { get; set; }
         public DbSet<ProfileFollow> ProfileFollows { get; set; }
         public DbSet<CreatorPlan> CreatorPlans { get; set; }
@@ -25,11 +25,12 @@ namespace Tribe.Data
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
+
             base.OnModelCreating(builder);
             CreatorPlanSeeder.SeedData(builder);
 
             // === IDENTITY TABLES UMBENENNEN ===
-            builder.Entity<ApplicationUser>().ToTable("Users");
+            
             builder.Entity<IdentityRole>().ToTable("Roles");
             builder.Entity<IdentityUserRole<string>>().ToTable("UserRoles");
             builder.Entity<IdentityUserClaim<string>>().ToTable("UserClaims");
@@ -57,7 +58,7 @@ namespace Tribe.Data
             #endregion
 
             // === PROFILE KONFIGURATION ===
-            builder.Entity<TribeProfile>(entity =>
+            builder.Entity<TribeUser>(entity =>
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).ValueGeneratedNever();
