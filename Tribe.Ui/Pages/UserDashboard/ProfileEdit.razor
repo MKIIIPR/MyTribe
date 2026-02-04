@@ -1,5 +1,4 @@
-﻿
-@using Microsoft.AspNetCore.Components.Authorization
+﻿@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using MudBlazor
 @using System.ComponentModel.DataAnnotations
@@ -108,8 +107,8 @@
                 <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="BecomeCreator">
                     become creator
                 </MudButton>
-                <MudButton ButtonType="ButtonType.Submit" 
-                            OnClick="HandleValidSubmit" 
+                <MudButton ButtonType="ButtonType.Button"
+                            OnClick="@(async () => await HandleValidSubmit())" 
                           Variant="Variant.Filled" 
                           Color="Color.Primary" 
                           StartIcon="@Icons.Material.Filled.Save">
@@ -133,31 +132,41 @@
     }
     private async Task BecomeCreator()
     {
-        var options = new DialogOptions()
+        try
         {
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true,
-            
-        };
+            System.Diagnostics.Debug.WriteLine("BecomeCreator invoked");
+            var options = new DialogOptions()
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
 
-        var parameters = new DialogParameters { ["TribeProfile"] = Profile };
+            };
 
-        // Öffne den Dialog
-        var dialog = DialogService.Show<CreatorPlanSelectionDialog>(null, parameters, options);
-        var result = await dialog.Result;
+            var parameters = new DialogParameters { ["TribeProfile"] = Profile };
 
-        if (!result.Canceled && result.Data is CreatorSubscription subscription)
-        {
-            // Verarbeiten des Ergebnisses nach der Dialogschließung
-            // z.B. das Profil aktualisieren oder einen API-Aufruf tätigen
-            Profile.ActiveCreatorSubscription = subscription;
-            // ... Weitere Logik, wie das Speichern des aktualisierten Profils
-            Snackbar.Add("Creator-Plan erfolgreich ausgewählt!", Severity.Success);
+            // Öffne den Dialog
+            var dialog = DialogService.Show<CreatorPlanSelectionDialog>(string.Empty, parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled && result.Data is CreatorSubscription subscription)
+            {
+                // Verarbeiten des Ergebnisses nach der Dialogschließung
+                Profile.ActiveCreatorSubscription = subscription;
+                Snackbar.Add("Creator-Plan erfolgreich ausgewählt!", Severity.Success);
+            }
+            else if (result.Canceled)
+            {
+                Snackbar.Add("Creator-Plan-Auswahl wurde abgebrochen.", Severity.Warning);
+            }
+            else
+            {
+                Snackbar.Add("Creator-Plan-Auswahl gab kein Ergebnis zurück.", Severity.Warning);
+            }
         }
-        else
+        catch (Exception ex)
         {
-            // Dialog wurde abgebrochen
-            Snackbar.Add("Creator-Plan-Auswahl wurde abgebrochen.", Severity.Warning);
+            System.Diagnostics.Debug.WriteLine($"BecomeCreator failed: {ex.Message}");
+            Snackbar.Add($"Fehler beim Öffnen des Creator-Dialogs: {ex.Message}", Severity.Error);
         }
     }
     public void HandleAvatarUpload(string imageUrl)
@@ -192,16 +201,25 @@
 
     private async Task HandleValidSubmit()
     {
+        if (Profile == null)
+        {
+            Snackbar.Add("Profil ist nicht geladen!", Severity.Warning);
+            return;
+        }
+
         try
         {
-
+            System.Diagnostics.Debug.WriteLine($"HandleValidSubmit called - Profile ID: {Profile.Id}");
+            
             await _userApi.UpdateAsync(Profile);
 
-            Snackbar.Add("Profil erfolgreich erstellt!", Severity.Success);
+            System.Diagnostics.Debug.WriteLine("Profile update successful");
+            Snackbar.Add("Profil erfolgreich aktualisiert!", Severity.Success);
            
         }
         catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"Error: {ex.Message}");
             Snackbar.Add($"Fehler beim Speichern: {ex.Message}", Severity.Error);
         }
     }

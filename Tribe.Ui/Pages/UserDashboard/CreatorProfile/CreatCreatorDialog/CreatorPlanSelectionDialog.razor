@@ -1,8 +1,8 @@
-﻿@page "/creator-plan"
-@using Microsoft.AspNetCore.Components
+﻿@using Microsoft.AspNetCore.Components
 @using Microsoft.Extensions.Logging
 @using MudBlazor
 @using System.Text.Json
+@using System.Text
 @using Tribe.Client.Services
 @using Tribe.Bib.Models.TribeRelated
 @using static Tribe.Bib.CommunicationModels.ComModels
@@ -52,7 +52,7 @@
 
         @if (CurrentStep == 2)
         {
-            <MudButton OnClick="SendCreatorApplication" StartIcon="@Icons.Material.Filled.Check">
+            <MudButton OnClick="SendCreatorApplication" StartIcon="@Icons.Material.Filled.Check" Disabled="@IsProcessing">
                 Become Creator
             </MudButton>
         }
@@ -83,7 +83,58 @@
 
     private async Task SendCreatorApplication()
     {
-        // Your logic here
+        if (IsProcessing) return;
+        if (!CanConfirm())
+        {
+            _logger?.LogWarning("Attempt to submit invalid subscription");
+            return;
+        }
+
+        try
+        {
+            IsProcessing = true;
+
+            CreatorApplication.StartDate = DateTime.UtcNow;
+            CreatorApplication.CreatedAt = DateTime.UtcNow;
+            CreatorApplication.UpdatedAt = DateTime.UtcNow;
+            CreatorApplication.PaymentStatus = "Pending";
+            CreatorApplication.IsActive = true;
+            CreatorApplication.IsPaid = false;
+
+            CreatorApplication.NextPaymentDate = CreatorApplication.Duration switch
+            {
+                "Monthly" => DateTime.UtcNow.AddMonths(1),
+                "Annual" => DateTime.UtcNow.AddYears(1),
+                "Lifetime" => null,
+                _ => DateTime.UtcNow.AddMonths(1)
+            };
+
+            var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+            var json = JsonSerializer.Serialize(CreatorApplication, options);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var response = await _client.PostAsync("api/CreatorSubscription/checkout", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseJson = await response.Content.ReadAsStringAsync();
+                var created = JsonSerializer.Deserialize<CreatorSubscription>(responseJson, options);
+                MudDialog.Close(DialogResult.Ok(created));
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger?.LogError("Subscription creation failed: {StatusCode} - {ErrorContent}", response.StatusCode, errorContent);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error sending creator application: {Message}", ex.Message);
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
     }
 
     private async Task LoadCreatorPlans()

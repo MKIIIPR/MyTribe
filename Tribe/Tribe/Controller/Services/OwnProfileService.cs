@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using Tribe.Bib.Models.TribeRelated;
@@ -19,12 +18,10 @@ namespace Tribe.Controller.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<OwnProfileService> _logger;
-        private readonly UserManager<ApplicationUser> _userManager;
 
-        public OwnProfileService(ApplicationDbContext context, ILogger<OwnProfileService> logger, UserManager<ApplicationUser> userManager)
+        public OwnProfileService(ApplicationDbContext context, ILogger<OwnProfileService> logger)
         {
-            _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
-            _context = context;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
             _logger = logger;
         }
         public async Task<bool> CheckOutSubscription(CreatorSubscription sub)
@@ -73,35 +70,31 @@ namespace Tribe.Controller.Services
 
             try
             {
-                // 1. Suche nach dem TribeProfile
+                // 1. Suche nach dem TribeProfile anhand der ApplicationUserId
                 var profile = await _context.TribeUsers
                     .FirstOrDefaultAsync(p => p.ApplicationUserId == userId);
 
                 // 2. Wenn kein Profil gefunden wird, erstelle ein neues
                 if (profile == null)
                 {
-                    // 3. Suche den ApplicationUser über den UserManager
-                    var applicationUser = await _userManager.FindByIdAsync(userId);
-
-                    if (applicationUser == null)
-                    {
-                        _logger.LogWarning("ApplicationUser mit ID {UserId} nicht gefunden. Ein Profil kann nicht erstellt werden.", userId);
-                        return null;
-                    }
-
                     profile = new TribeUser
                     {
                         ApplicationUserId = userId,
-                        // Nutze den UserName oder einen anderen geeigneten Namen aus dem ApplicationUser
-                        DisplayName = applicationUser.UserName ?? "Unbekannt"
+                        DisplayName = "Neuer Benutzer",
+                        ProfileType = Constants.ProfileTypes.Regular,
+                        IsCreator = false,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
                     };
 
-                    // 4. Neues Profil zur Datenbank hinzufügen und speichern
+                    // 3. Neues Profil zur Datenbank hinzufügen und speichern
                     _context.TribeUsers.Add(profile);
                     await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation("Neues TribeUser-Profil erstellt für ApplicationUserId {UserId}", userId);
                 }
 
-                // 5. Das gefundene oder neu erstellte Profil zurückgeben
+                // 4. Das gefundene oder neu erstellte Profil zurückgeben
                 return profile;
             }
             catch (Exception ex)
@@ -158,14 +151,60 @@ namespace Tribe.Controller.Services
 
             try
             {
-                // Nur bestimmte Felder aktualisieren (oder alles – je nach Regel)
+                // Alle Felder aktualisieren (außer ID und Navigation Properties)
                 existing.DisplayName = profile.DisplayName;
                 existing.Bio = profile.Bio;
-                if(profile.AvatarUrl.Contains("data:image/") && profile.AvatarUrl.Contains(";base64,"))
-                    // Konvertiere Base64-Bild in WebP-Format, wenn es Base64 ist
-                    existing.AvatarUrl = ImageConverter.ConvertAndResizeBase64(profile.AvatarUrl,75, new SixLabors.ImageSharp.Size(250,250));
+                existing.ProfileType = profile.ProfileType;
+                existing.IsCreator = profile.IsCreator;
+                
+                // Avatar-Verarbeitung
+                if (!string.IsNullOrEmpty(profile.AvatarUrl))
+                {
+                    // Prüfe ob es Base64 ist
+                    if (profile.AvatarUrl.Contains("data:image/") && profile.AvatarUrl.Contains(";base64,"))
+                    {
+                        // Extrahiere nur den Base64-Teil
+                        var parts = profile.AvatarUrl.Split(",");
+                        if (parts.Length == 2)
+                        {
+                            var base64Data = parts[1];
+                            
+                            // Prüfe die Größe des Base64-Strings
+                            // Base64 ist ca. 33% größer als Binärdaten, also:
+                            // Base64-Größe / 1.33 ≈ tatsächliche Größe
+                            var estimatedSizeInBytes = (base64Data.Length * 3) / 4;
+                            var maxSizeInBytes = 5 * 1024 * 1024; // 5 MB max
+                            
+                            _logger.LogInformation("Avatar-Größe: {SizeKB} KB", estimatedSizeInBytes / 1024);
+                            
+                            if (estimatedSizeInBytes > maxSizeInBytes)
+                            {
+                                _logger.LogWarning("Avatar zu groß ({SizeKB} KB). Maximum: 5 MB. Avatar wird nicht aktualisiert.", 
+                                    estimatedSizeInBytes / 1024);
+                                // Avatar wird NICHT aktualisiert
+                            }
+                            else
+                            {
+                                // Avatar-Größe OK → übernehm direkt als Data URL
+                                existing.AvatarUrl = profile.AvatarUrl;
+                                _logger.LogInformation("Avatar aktualisiert (Base64, {SizeKB} KB)", 
+                                    estimatedSizeInBytes / 1024);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Externe URL → direkt übernehmen
+                        existing.AvatarUrl = profile.AvatarUrl;
+                        _logger.LogInformation("Avatar aktualisiert (externe URL)");
+                    }
+                }
                 else
-                    existing.AvatarUrl = profile.AvatarUrl; // Andernfalls direkt übernehmen
+                {
+                    // Wenn Avatar leer ist, auf null setzen
+                    existing.AvatarUrl = null;
+                }
+                
                 existing.UpdatedAt = DateTime.UtcNow;
 
                 _context.TribeUsers.Update(existing);
