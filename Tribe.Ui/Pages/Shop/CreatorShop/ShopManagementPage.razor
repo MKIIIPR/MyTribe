@@ -1,0 +1,44 @@
+@page "/creator/shop/dashboard/shop"
+@using MudBlazor
+@using Tribe.Services.States
+@inject UserState UserState
+@inject NavigationManager Navigation
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <AuthorizeView>
+        <Authorized>
+            @if (UserState?.TribeProfile?.IsCreator == true)
+            {
+                <MudPaper Class="pa-6" Elevation="2">
+                    <MudStack Spacing="3">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@Icons.Material.Filled.Store" Size="Size.Large" Color="Color.Primary" />
+                            <MudText Typo="Typo.h4">Shop Management</MudText>
+                            <MudSpacer />
+                            <MudButton Color="Color.Primary" Variant="Variant.Filled" 
+                                      StartIcon="@Icons.Material.Filled.Add"
+                                      Href="/creator/shop/product/edit">
+                                Neues Produkt
+                            </MudButton>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+                
+                <Tribe.Ui.Pages.CreatorShop.CategoryList />
+                <Tribe.Ui.Pages.CreatorShop.ShopDashboard />
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Warning" Class="mt-4">
+                    Sie müssen ein Creator sein, um auf den Shop zuzugreifen. 
+                    <MudLink Href="/UserDashboard">Gehen Sie zum Dashboard</MudLink>, um Creator zu werden.
+                </MudAlert>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <MudAlert Severity="Severity.Error">
+                Sie müssen angemeldet sein, um auf den Shop zuzugreifen.
+            </MudAlert>
+        </NotAuthorized>
+    </AuthorizeView>
+</MudContainer>

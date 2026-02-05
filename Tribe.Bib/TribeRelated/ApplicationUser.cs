@@ -208,7 +208,6 @@
 
         // Navigation Properties
         public virtual ICollection<CreatorToken> CreatorTokens { get; set; } = new List<CreatorToken>();
-        public virtual ICollection<Raffle> Raffles { get; set; } = new List<Raffle>();
         public virtual ICollection<AffiliatePartner> AffiliatePartners { get; set; } = new List<AffiliatePartner>();
         public virtual ICollection<CreatorPlacement> Placements { get; set; } = new List<CreatorPlacement>();
     }
@@ -283,43 +282,42 @@
 
         public DateTime FollowedAt { get; set; } = DateTime.UtcNow;
     }
-    // 7. RAFFLE SYSTEM - Erweitert f�r verschiedene Verlosungstypen
+    // 7. RAFFLE SYSTEM - Erweitert für verschiedene Verlosungstypen
     public class Raffle
     {
         [Key]
-        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Id { get; set; } = string.Empty; // Wird erst beim Speichern gesetzt
 
         [Required]
         [MaxLength(200)]
-        public string Title { get; set; }
-        public string? PrizeName { get; set; } // Name des Preises
-        public string? EntryRequirement { get; set; } // Beschreibung der Teilnahmebedingungen
+        public string Title { get; set; } = string.Empty;
+        public string? PrizeName { get; set; }
+        public string? EntryRequirement { get; set; }
         public string? Description { get; set; }
         public string? ImageUrl { get; set; }
 
         // === RAFFLE CONFIG ===
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
         public int MaxEntries { get; set; } = 1000;
         public int CurrentEntries { get; set; } = 0;
 
         // === VERLOSUNGSYSTEM ===
-        public string RaffleType { get; set; } = Constants.RaffleTypes.Standard; // Standard, Multiple, TwoStage
-        public string? RaffleConfig { get; set; } // JSON Config f�r komplexe Systeme
+        public string RaffleType { get; set; } = Constants.RaffleTypes.Standard;
+        public string? RaffleConfig { get; set; }
 
         // === PRIZE INFO ===
-        public string PrizeDescription { get; set; }
+        public string PrizeDescription { get; set; } = string.Empty;
         public decimal PrizeValue { get; set; } = 0;
-        public int PrizeCount { get; set; } = 1; // Anzahl Gewinner f�r Multiple-Raffles
+        public int PrizeCount { get; set; } = 1;
 
         // === STATUS ===
         public string Status { get; set; } = Constants.RaffleStatus.Active;
         public DateTime? DrawnAt { get; set; }
 
-        // === CREATOR CONNECTION ===
-        public string CreatorProfileId { get; set; }
-        [ForeignKey(nameof(CreatorProfileId))]
-        public CreatorProfile Creator { get; set; }
+        // === CREATOR CONNECTION (nur ID, keine Navigation für API-Kommunikation) ===
+        [Required]
+        public string CreatorProfileId { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

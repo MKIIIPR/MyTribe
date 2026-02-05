@@ -1,0 +1,87 @@
+@page "/creator/shop/orders/{OrderId}"
+@using MudBlazor
+@using Tribe.Bib.ShopRelated
+@using static Tribe.Bib.ShopRelated.ShopStruckture
+@inject Tribe.Services.ClientServices.ShopServices.IOrderClientService OrderClient
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<MudPaper Class="pa-4 mt-4">
+    @if (_isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (_order == null)
+    {
+        <MudText>Bestellung nicht gefunden.</MudText>
+    }
+    else
+    {
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.h6">Bestell-Details: @_order.OrderNumber</MudText>
+            <MudText>Datum: @_order.CreatedAt.ToString("dd.MM.yyyy HH:mm")</MudText>
+            <MudText>Status: @_order.Status</MudText>
+            <MudText>Betrag: €@_order.TotalAmount.ToString("F2")</MudText>
+
+            <MudDivider Class="my-2" />
+            <MudText Typo="Typo.subtitle1">Positionen</MudText>
+            @foreach (var item in _items)
+            {
+                <MudPaper Class="pa-2 mb-2">
+                    <MudStack Row="true" AlignItems="AlignItems.Center">
+                        <MudText>@item.ProductTitle</MudText>
+                        <MudSpacer />
+                        <MudText>€@item.TotalPrice.ToString("F2")</MudText>
+                    </MudStack>
+                </MudPaper>
+            }
+
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="MarkPaid">Als bezahlt markieren</MudButton>
+                <MudButton Variant="Variant.Text" OnClick="Back">Zurück</MudButton>
+            </MudStack>
+        </MudStack>
+    }
+</MudPaper>
+
+@code {
+    [Parameter]
+    public string OrderId { get; set; } = string.Empty;
+
+    private ShopOrder? _order;
+    private List<ShopOrderItem> _items = new();
+    private bool _isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrder();
+    }
+
+    private async Task LoadOrder()
+    {
+        try
+        {
+            _isLoading = true;
+            _order = await OrderClient.GetOrderByIdAsync(OrderId);
+            // simple load of items via generic api or DB not implemented: leave items empty for now
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task MarkPaid()
+    {
+        if (_order == null) return;
+        var ok = await OrderClient.UpdateOrderStatusAsync(_order.Id, "confirmed");
+        if (ok) { Snackbar.Add("Als bezahlt markiert", Severity.Success); await LoadOrder(); }
+        else Snackbar.Add("Fehler beim Aktualisieren", Severity.Error);
+    }
+
+    private void Back() => Navigation.NavigateTo("/creator/shop/dashboard");
+}

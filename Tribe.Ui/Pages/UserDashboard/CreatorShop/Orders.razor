@@ -1,0 +1,78 @@
+@using MudBlazor
+@using Tribe.Bib.ShopRelated
+@using static Tribe.Bib.ShopRelated.ShopStruckture
+@inject Tribe.Services.ClientServices.ShopServices.IOrderClientService OrderClient
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
+
+<MudPaper Class="pa-4 mt-4">
+    <MudStack Spacing="3">
+        <MudStack Row="true" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h6">Bestellungen</MudText>
+            <MudSpacer />
+        </MudStack>
+
+        @if (_isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (_orders.Count == 0)
+        {
+            <MudText>Keine Bestellungen.</MudText>
+        }
+        else
+        {
+            <MudTable Items="_orders" Hover="true">
+                <HeaderContent>
+                    <MudTh>Bestellnummer</MudTh>
+                    <MudTh>Datum</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Betrag</MudTh>
+                    <MudTh>Aktionen</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="o">
+                    <MudTd>@o.OrderNumber</MudTd>
+                    <MudTd>@o.CreatedAt.ToString("dd.MM.yyyy HH:mm")</MudTd>
+                    <MudTd>@o.Status</MudTd>
+                    <MudTd>€@o.TotalAmount.ToString("F2")</MudTd>
+                    <MudTd>
+                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(async () => await OpenDetails(o.Id))">Details</MudButton>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    private List<ShopOrder> _orders = new();
+    private bool _isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+    }
+
+    private async Task LoadOrders()
+    {
+        try
+        {
+            _isLoading = true;
+            _orders = await OrderClient.GetCreatorOrdersAsync() ?? new List<ShopOrder>();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OpenDetails(string id)
+    {
+        NavigationManager.NavigateTo($"/creator/shop/orders/{id}");
+    }
+}

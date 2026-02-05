@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MudBlazor.Services;
+using Tribe.Middleware;
 
 using System.Text;
 using Tribe.Bib.Models.TribeRelated;
@@ -16,6 +17,7 @@ using Tribe.Controller.Services;
 using Tribe.Data;
 using Tribe.Services;
 using Tribe.Services.ClientServices;
+using Tribe.Services.ClientServices.ShopServices;
 using Tribe.Services.ClientServices.SimpleAuth;
 using Tribe.Services.Hubs;
 using Tribe.Services.ServerServices;
@@ -61,10 +63,22 @@ builder.Services.AddScoped<UserState>();
 builder.Services.AddScoped<IAuthService, SimplifiedAuthService>();
 
 builder.Services.AddHttpClient();
+// Client side shop services for prerendering and server-side components
+builder.Services.AddScoped<IProductClientService, Tribe.Services.ClientServices.ShopServices.ProductClientService>();
+builder.Services.AddScoped<ICategoryClientService, Tribe.Services.ClientServices.ShopServices.CategoryClientService>();
+builder.Services.AddScoped<IOrderClientService, Tribe.Services.ClientServices.ShopServices.OrderClientService>();
+builder.Services.AddScoped<Tribe.Services.ClientServices.ShopServices.IRaffleClientService, Tribe.Services.ClientServices.ShopServices.RaffleClientService>();
+// Unified shop creator facade for server-side components
+builder.Services.AddScoped<IShopCreatorService, Tribe.Services.ClientServices.ShopServices.ShopCreatorService>();
 #endregion
 
 #region Server Services
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IDownloadService, DownloadService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IRaffleService, RaffleService>();
 builder.Services.AddScoped<IOwnProfileService, OwnProfileService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<IAuthNotificationService, AuthNotificationService>();
@@ -199,6 +213,9 @@ else
 
 app.UseHttpsRedirection();
 app.UseAntiforgery();
+
+// Add rate limiting middleware for Shop API
+app.UseMiddleware<RateLimitMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();

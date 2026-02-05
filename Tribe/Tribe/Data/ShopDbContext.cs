@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using static Tribe.Bib.ShopRelated.ShopStruckture;
+using Tribe.Bib.ShopRelated;
 
 namespace Tribe.Data
 {

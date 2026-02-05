@@ -438,7 +438,6 @@ namespace Tribe.API.Controller
                     .Include(p => p.CreatorTokens)
                     .Include(p => p.AffiliatePartners)
                     .Include(p => p.Placements)
-                    .Include(p => p.Raffles)
                     .FirstOrDefaultAsync(p => p.Id == userId);
 
                 if (profile == null)

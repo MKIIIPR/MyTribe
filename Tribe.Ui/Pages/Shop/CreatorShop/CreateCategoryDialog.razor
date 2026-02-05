@@ -1,0 +1,58 @@
+@using MudBlazor
+@using Tribe.Bib.ShopRelated
+@inject Tribe.Services.ClientServices.ShopServices.IShopCreatorService ShopCreator
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudTextField T="string" @bind-Value="_name" Label="Name" Required="true" />
+            <MudTextField T="string" @bind-Value="_description" Label="Beschreibung" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">Abbrechen</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save" Disabled="!_isValid">Erstellen</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private MudForm? _form;
+    private bool _isValid = false;
+    private string _name = string.Empty;
+    private string _description = string.Empty;
+
+    private async Task Save()
+    {
+        _form?.Validate();
+        if (!_isValid) return;
+
+        try
+        {
+            var category = new Tribe.Bib.ShopRelated.ShopStruckture.ShopCategory
+            {
+                Name = _name,
+                // Description not part of ShopCategory model; if needed adapt model or store elsewhere
+            };
+
+            var created = await ShopCreator.CreateCategoryAsync(category);
+            if (created != null)
+            {
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Fehler beim Erstellen der Kategorie", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

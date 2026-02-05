@@ -1,0 +1,175 @@
+@page "/shop/product/{ProductId}"
+@using MudBlazor
+@using Tribe.Bib.ShopRelated
+@using Tribe.Services.ClientServices.ShopServices
+@using static Tribe.Bib.ShopRelated.ShopStruckture
+@inject IProductClientService ProductClient
+@inject ShopService ShopService
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    @if (_isLoading)
+    {
+        <MudProgressCircular Indeterminate="true" />
+    }
+    else if (_product == null)
+    {
+        <MudAlert Severity="Severity.Error">Produkt nicht gefunden</MudAlert>
+    }
+    else
+    {
+        <MudPaper Class="pa-6" Elevation="2">
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudImage Src="@(_product.ThumbnailUrl ?? "https://via.placeholder.com/400")" 
+                             Alt="@_product.Title" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.h4">@_product.Title</MudText>
+                        <MudText Typo="Typo.body1">@_product.Description</MudText>
+
+                        <MudRating ReadOnly="true" Value="GetAverageRating()" />
+
+                        <MudStack Row="true" Spacing="1">
+                            @if (_product.OriginalPrice.HasValue && _product.OriginalPrice > _product.Price)
+                            {
+                                <MudText Typo="Typo.h6" style="text-decoration: line-through;">
+                                    €@_product.OriginalPrice.Value.ToString("F2")
+                                </MudText>
+                            }
+                            <MudText Typo="Typo.h5" Color="Color.Primary">
+                                €@_product.Price.ToString("F2")
+                            </MudText>
+                        </MudStack>
+
+                        <MudText Typo="Typo.caption">@_product.ProductTypeDisplay</MudText>
+
+                        <!-- Type-specific details -->
+                        @if (_product is ImageProduct img)
+                        {
+                            <MudText Typo="Typo.body2">
+                                Auflösung: @img.Resolution | Format: @img.ImageFormat
+                            </MudText>
+                        }
+                        else if (_product is VideoProduct vid)
+                        {
+                            <MudText Typo="Typo.body2">
+                                Dauer: @(vid.DurationSeconds / 60) min | Qualität: @vid.VideoQuality
+                            </MudText>
+                        }
+                        else if (_product is PhysicalProduct phys)
+                        {
+                            <MudText Typo="Typo.body2">
+                                Verfügbar: @phys.StockQuantity Stück | Versand: €@phys.ShippingCost.ToString("F2")
+                            </MudText>
+                        }
+
+                        <MudNumericField T="int" @bind-Value="_quantity" Label="Menge" Min="1" />
+
+                        <MudStack Row="true" Spacing="2" Class="mt-4">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                                      OnClick="AddToCart">
+                                In Warenkorb
+                            </MudButton>
+                            <MudButton Variant="Variant.Text" OnClick="@(() => Navigation.NavigateTo("/"))">
+                                Zurück
+                            </MudButton>
+                        </MudStack>
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+
+            <!-- Reviews Section -->
+            <MudDivider Class="my-6" />
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.h6">Bewertungen (@_reviews.Count)</MudText>
+                
+                @foreach (var review in _reviews.Take(5))
+                {
+                    <MudCard>
+                        <MudCardContent>
+                            <MudStack>
+                                <MudStack Row="true" Spacing="2">
+                                    <MudText Typo="Typo.subtitle2">@review.UserName</MudText>
+                                    <MudRating ReadOnly="true" Value="review.Rating" />
+                                </MudStack>
+                                <MudText Typo="Typo.body2">@review.Comment</MudText>
+                                <MudText Typo="Typo.caption">@review.CreatedAt.ToString("dd.MM.yyyy")</MudText>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                }
+
+                <MudButton Variant="Variant.Text" Href="@($"/shop/product/{ProductId}/reviews")">
+                    Alle Bewertungen anzeigen
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code{
+    [Parameter] public string? ProductId { get; set; }
+    private ShopProduct? _product;
+    private List<ProductReview> _reviews = new();
+    private int _quantity = 1;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(ProductId))
+        {
+            await LoadProduct();
+            await LoadReviews();
+        }
+    }
+
+    private async Task LoadProduct()
+    {
+        try
+        {
+            _isLoading = true;
+            _product = await ProductClient.GetProductByIdAsync(ProductId!);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadReviews()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/shop/reviews/product/{ProductId}");
+            if (response.IsSuccessStatusCode)
+            {
+                _reviews = await response.Content.ReadFromJsonAsync<List<ProductReview>>() ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler beim Laden von Bewertungen: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task AddToCart()
+    {
+        if (_product == null) return;
+        ShopService.AddToCart(_product, _quantity);
+        Snackbar.Add($"{_product.Title} zum Warenkorb hinzugefügt", Severity.Success);
+    }
+
+    private int GetAverageRating()
+    {
+        return _reviews.Count > 0 ? (int)_reviews.Average(r => r.Rating) : 0;
+    }
+}

@@ -2,8 +2,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Tribe.Bib.Models.TribeRelated;
+using Tribe.Data;
 using Tribe.Services.ServerServices;
 using static Tribe.Bib.CommunicationModels.ComModels;
 
@@ -19,6 +21,7 @@ namespace Tribe.Controller
         private readonly IAuthNotificationService _authNotificationService;
         private readonly ILogger<AuthController> _logger;
         private readonly IHostEnvironment _environment;
+        private readonly ApplicationDbContext _context;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
@@ -26,7 +29,8 @@ namespace Tribe.Controller
             IJwtTokenService jwtTokenService,
             IAuthNotificationService authNotificationService,
             ILogger<AuthController> logger,
-            IHostEnvironment environment)
+            IHostEnvironment environment,
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -34,55 +38,70 @@ namespace Tribe.Controller
             _authNotificationService = authNotificationService;
             _logger = logger;
             _environment = environment;
+            _context = context;
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-            var userAgent = HttpContext.Request.Headers["User-Agent"].ToString();
 
             _logger.LogInformation("LOGIN_ATTEMPT: Email={Email}, IP={ClientIp}", request.Email, clientIp);
 
             try
             {
+                // 1. Prüfe ob ApplicationUser existiert
                 var user = await _userManager.FindByEmailAsync(request.Email);
                 if (user == null)
                 {
-                    _logger.LogWarning("LOGIN_FAILED: Email={Email}, Reason=UserNotFound, IP={ClientIp}",
-                        request.Email, clientIp);
+                    _logger.LogWarning("LOGIN_FAILED: Email={Email}, Reason=UserNotFound", request.Email);
                     return BadRequest(new { message = "Invalid credentials" });
                 }
 
+                // 2. Prüfe Passwort
                 var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
                 if (!result.Succeeded)
                 {
-                    _logger.LogWarning("LOGIN_FAILED: Email={Email}, UserId={UserId}, Reason=InvalidPassword, IP={ClientIp}",
-                        request.Email, user.Id, clientIp);
+                    _logger.LogWarning("LOGIN_FAILED: Email={Email}, Reason=InvalidPassword", request.Email);
                     return BadRequest(new { message = "Invalid credentials" });
                 }
 
-                var token = _jwtTokenService.GenerateToken(user);
+                // 3. Suche passenden TribeUser anhand ApplicationUserId
+                var tribeUser = await _context.TribeUsers
+                    .FirstOrDefaultAsync(t => t.ApplicationUserId == user.Id);
+                string token = string.Empty;
+                // 4. Token mit profileId generieren
+                if (tribeUser != null)
+                {
+                    token = _jwtTokenService.GenerateToken(tribeUser);
+                }
+                else
+                {
+                    _logger.LogDebug("TRIBE_USER_NOT_FOUND: ApplicationUserId={ApplicationUserId}",
+                        user.Id);
+                }
+
 
                 // Update last login
                 user.LastLoginAt = DateTime.UtcNow;
                 await _userManager.UpdateAsync(user);
 
-                // Cookie setzen - EINZIGE Token-Quelle
+                // Cookie setzen
                 SetAuthCookie(token);
 
                 // SignalR notification
-                await _authNotificationService.NotifyUserLoggedInAsync(user.Id, user.UserName!);
+                await _authNotificationService.NotifyUserLoggedInAsync(tribeUser.Id,tribeUser.DisplayName);
 
-                _logger.LogInformation("LOGIN_SUCCESS: Email={Email}, UserId={UserId}, IP={ClientIp}",
-                    request.Email, user.Id, clientIp);
+                _logger.LogInformation("LOGIN_SUCCESS: Email={Email}, ProfileId={ProfileId}, IP={ClientIp}",
+                    request.Email, tribeUser?.Id, clientIp);
 
                 return Ok(new LoginResponse
                 {
                     Token = token,
-                    UserId = user.Id,
-                    UserName = user.UserName!,
-                    Email = user.Email!
+                    UserId = tribeUser.Id,
+                    ProfileId = tribeUser?.Id,
+                    UserName = tribeUser.DisplayName
+                    
                 });
             }
             catch (Exception ex)

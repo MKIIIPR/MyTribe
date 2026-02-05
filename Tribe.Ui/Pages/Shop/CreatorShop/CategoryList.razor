@@ -1,0 +1,86 @@
+@using MudBlazor
+@using Tribe.Bib.ShopRelated
+@inject HttpClient Http
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject Tribe.Services.ClientServices.ShopServices.ICategoryClientService CategoryClient
+@using Tribe.Services.ClientServices.ShopServices
+
+<MudPaper Class="pa-4 mt-4">
+    <MudStack Spacing="2">
+        <MudStack Row="true" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h6">Kategorien</MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog">Neue Kategorie</MudButton>
+        </MudStack>
+
+        @if (_isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (_categories?.Count == 0)
+        {
+            <MudText>Keine Kategorien vorhanden.</MudText>
+        }
+        else
+        {
+            <MudTable T="CategoryDto" Items="_categories">
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Beschreibung</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="cat">
+                    <MudTd>@cat.Name</MudTd>
+                    <MudTd>@(cat.Description ?? "")</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    private List<CategoryDto> _categories = new();
+    private bool _isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        try
+        {
+            _isLoading = true;
+            // Use client service to load categories
+            var cats = await CategoryClient.GetMyCategoriesAsync();
+            if (cats != null)
+            {
+                _categories = cats.Select(c => new CategoryDto { Id = c.Id, Name = c.Name, Description = c.Description }).ToList();
+            }
+            else
+            {
+                _categories = new List<CategoryDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var dialog = await DialogService.ShowAsync<CreateCategoryDialog>("Neue Kategorie erstellen");
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            await LoadCategories();
+            Snackbar.Add("Kategorie erstellt", Severity.Success);
+        }
+    }
+}

@@ -1,4 +1,6 @@
-﻿using Tribe.Client.Services;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Tribe.Client.Services;
 using static Tribe.Bib.ShopRelated.ShopStruckture;
 
 namespace Tribe.Services.ClientServices.ShopServices
@@ -17,11 +19,13 @@ namespace Tribe.Services.ClientServices.ShopServices
     public class ProductClientService : IProductClientService
     {
         private readonly IApiService _apiService;
+        private readonly ILogger<ProductClientService> _logger;
         private const string ProductsEndpoint = "api/Products";
 
-        public ProductClientService(IApiService apiService)
+        public ProductClientService(IApiService apiService, ILogger<ProductClientService>? logger = null)
         {
             _apiService = apiService;
+            _logger = logger ?? NullLogger<ProductClientService>.Instance;
         }
 
         public void SetAuthToken(string token)
@@ -36,13 +40,87 @@ namespace Tribe.Services.ClientServices.ShopServices
 
         public async Task<List<ShopProduct>> GetMyProductsAsync()
         {
-            var products = await _apiService.GetAsync<List<ShopProduct>>(ProductsEndpoint);
-            return products ?? new List<ShopProduct>();
+            // Read raw JSON elements and map to concrete ShopProduct implementations
+            try
+            {
+                var elements = await _apiService.GetAsync<List<System.Text.Json.JsonElement>>(ProductsEndpoint);
+                var list = new List<ShopProduct>();
+                if (elements == null)
+                {
+                    _logger.LogWarning("GetMyProductsAsync: API returned null elements for {Endpoint}", ProductsEndpoint);
+                    // fallback: try direct typed deserialization
+                    var direct = await _apiService.GetAsync<List<ShopProduct>>(ProductsEndpoint);
+                    if (direct != null)
+                    {
+                        return direct;
+                    }
+                    return list;
+                }
+
+                var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                foreach (var el in elements)
+                {
+                    try
+                    {
+                        ShopProduct? p = null;
+                        if (el.ValueKind == System.Text.Json.JsonValueKind.Object)
+                        {
+                            if (el.TryGetProperty("SKU", out _) || el.TryGetProperty("StockQuantity", out _))
+                                p = System.Text.Json.JsonSerializer.Deserialize<PhysicalProduct>(el.GetRawText(), opts);
+                            else if (el.TryGetProperty("VideoUrl", out _))
+                                p = System.Text.Json.JsonSerializer.Deserialize<VideoProduct>(el.GetRawText(), opts);
+                            else if (el.TryGetProperty("HighResImageUrls", out _) || el.TryGetProperty("ImageFormat", out _))
+                                p = System.Text.Json.JsonSerializer.Deserialize<ImageProduct>(el.GetRawText(), opts);
+                            else if (el.TryGetProperty("DurationMinutes", out _))
+                                p = System.Text.Json.JsonSerializer.Deserialize<ServiceProduct>(el.GetRawText(), opts);
+                            else if (el.TryGetProperty("EventDate", out _))
+                                p = System.Text.Json.JsonSerializer.Deserialize<EventTicketProduct>(el.GetRawText(), opts);
+                            else
+                                p = System.Text.Json.JsonSerializer.Deserialize<PhysicalProduct>(el.GetRawText(), opts);
+                        }
+
+                        if (p != null) list.Add(p);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to deserialize product element");
+                    }
+                }
+
+                return list;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetMyProductsAsync failed");
+                return new List<ShopProduct>();
+            }
         }
 
         public async Task<ShopProduct?> GetProductByIdAsync(string productId)
         {
-            return await _apiService.GetAsync<ShopProduct>($"{ProductsEndpoint}/{productId}");
+            var el = await _apiService.GetAsync<System.Text.Json.JsonElement?>($"{ProductsEndpoint}/{productId}");
+            if (el == null || el.Value.ValueKind != System.Text.Json.JsonValueKind.Object) return null;
+            var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var je = el.Value;
+            try
+            {
+                if (je.TryGetProperty("SKU", out _) || je.TryGetProperty("StockQuantity", out _))
+                    return System.Text.Json.JsonSerializer.Deserialize<PhysicalProduct>(je.GetRawText(), opts);
+                if (je.TryGetProperty("VideoUrl", out _))
+                    return System.Text.Json.JsonSerializer.Deserialize<VideoProduct>(je.GetRawText(), opts);
+                if (je.TryGetProperty("HighResImageUrls", out _) || je.TryGetProperty("ImageFormat", out _))
+                    return System.Text.Json.JsonSerializer.Deserialize<ImageProduct>(je.GetRawText(), opts);
+                if (je.TryGetProperty("DurationMinutes", out _))
+                    return System.Text.Json.JsonSerializer.Deserialize<ServiceProduct>(je.GetRawText(), opts);
+                if (je.TryGetProperty("EventDate", out _))
+                    return System.Text.Json.JsonSerializer.Deserialize<EventTicketProduct>(je.GetRawText(), opts);
+
+                return System.Text.Json.JsonSerializer.Deserialize<PhysicalProduct>(je.GetRawText(), opts);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public async Task<ShopProduct?> CreateProductAsync<T>(T product) where T : ShopProduct

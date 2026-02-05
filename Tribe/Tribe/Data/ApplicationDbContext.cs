@@ -2,10 +2,32 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Emit;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Tribe.Bib.Models.TribeRelated;
 
 namespace Tribe.Data
 {
+    // === PRODUCT RAFFLE BINDING MODEL ===
+    public class ProductRaffleBinding
+    {
+        [Key]
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+
+        [Required]
+        [MaxLength(450)]
+        public string ProductId { get; set; } = string.Empty;
+
+        [Required]
+        [MaxLength(450)]
+        public string RaffleId { get; set; } = string.Empty;
+
+        public int TokensPerPurchase { get; set; } = 1;
+        public bool IsActive { get; set; } = true;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    }
+
     // Die Basis-Klasse 'ApplicationDbContext' bleibt unverändert.
     public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
     {
@@ -22,6 +44,7 @@ namespace Tribe.Data
         public DbSet<RaffleTokenRequirement> RaffleTokenRequirements { get; set; }
         public DbSet<RaffleEntry> RaffleEntries { get; set; }
         public DbSet<RaffleWinner> RaffleWinners { get; set; }
+        public DbSet<ProductRaffleBinding> ProductRaffleBindings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -139,11 +162,10 @@ namespace Tribe.Data
                 entity.Property(e => e.RaffleType).IsRequired().HasMaxLength(20);
                 entity.Property(e => e.Status).IsRequired().HasMaxLength(20);
                 entity.Property(e => e.PrizeValue).HasPrecision(18, 2);
+                entity.Property(e => e.CreatorProfileId).IsRequired();
 
-                entity.HasOne(e => e.Creator)
-                      .WithMany(p => p.Raffles)
-                      .HasForeignKey(e => e.CreatorProfileId)
-                      .OnDelete(DeleteBehavior.Cascade); // Löscht alle Raffles, wenn der Creator gelöscht wird.
+                // Nur FK-Index, keine Navigation-Property
+                entity.HasIndex(e => e.CreatorProfileId);
 
                 entity.ToTable(t => t.HasCheckConstraint("CK_Raffle_ValidDateRange",
                     "[EndDate] > [StartDate]"));
@@ -222,6 +244,16 @@ namespace Tribe.Data
 
                 entity.ToTable(t => t.HasCheckConstraint("CK_RaffleWinner_PositivePosition",
                     "[Position] > 0"));
+            });
+
+            // === PRODUCT RAFFLE BINDING ===
+            builder.Entity<ProductRaffleBinding>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.ProductId).IsRequired().HasMaxLength(450);
+                entity.Property(e => e.RaffleId).IsRequired().HasMaxLength(450);
+                entity.HasIndex(e => e.ProductId).IsUnique(); // 1 Produkt = max 1 Raffle
+                entity.HasIndex(e => e.RaffleId);
             });
         }
     }

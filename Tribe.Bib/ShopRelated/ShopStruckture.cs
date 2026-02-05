@@ -73,6 +73,9 @@ namespace Tribe.Bib.ShopRelated
 
             // SEO & Tags
             public List<string> Tags { get; set; } = new();
+            // Optional category id reference
+            // Optional category id reference
+            public string? CategoryId { get; set; }
             public string? SeoTitle { get; set; }
             public string? SeoDescription { get; set; }
 

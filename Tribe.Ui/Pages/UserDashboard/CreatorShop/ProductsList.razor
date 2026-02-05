@@ -1,0 +1,92 @@
+@using MudBlazor
+@using Tribe.Bib.ShopRelated
+@using static Tribe.Bib.ShopRelated.ShopStruckture
+@inject Tribe.Services.ClientServices.ShopServices.IProductClientService ProductClient
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<MudPaper Class="pa-4 mt-4">
+    <MudStack Spacing="3">
+        <MudStack Row="true" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h6">Produkte</MudText>
+            <MudSpacer />
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CreateNew">Neues Produkt</MudButton>
+        </MudStack>
+
+        @if (_isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (_products.Count == 0)
+        {
+            <MudText>Keine Produkte vorhanden.</MudText>
+        }
+        else
+        {
+            <MudTable Items="_products" Hover="true">
+                <HeaderContent>
+                    <MudTh>Titel</MudTh>
+                    <MudTh>Preis</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Aktionen</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="p">
+                    <MudTd>@p.Title</MudTd>
+                    <MudTd>€@p.Price.ToString("F2")</MudTd>
+                    <MudTd>@p.Status</MudTd>
+                    <MudTd>
+                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(async () => await Edit(p.Id))">Bearbeiten</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(async () => await Delete(p.Id))">Löschen</MudButton>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    private List<ShopProduct> _products = new();
+    private bool _isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        try
+        {
+            _isLoading = true;
+            _products = await ProductClient.GetMyProductsAsync() ?? new List<ShopProduct>();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task CreateNew()
+    {
+        Navigation.NavigateTo("/creator/shop/product/edit");
+    }
+
+    private async Task Edit(string id)
+    {
+        Navigation.NavigateTo($"/creator/shop/product/edit/{id}");
+    }
+
+    private async Task Delete(string id)
+    {
+        var confirmed = await DialogService.ShowMessageBox("Bestätigung", "Produkt wirklich löschen?", yesText: "Ja", cancelText: "Nein");
+        if (confirmed != true) return;
+        var ok = await ProductClient.DeleteProductAsync(id);
+        if (ok) { await LoadProducts(); Snackbar.Add("Gelöscht", Severity.Success); }
+        else Snackbar.Add("Fehler beim Löschen", Severity.Error);
+    }
+}

@@ -1,0 +1,223 @@
+@page "/creator/shop/product/edit"
+@using MudBlazor
+@using Tribe.Bib.ShopRelated
+@using static Tribe.Bib.ShopRelated.ShopStruckture
+@inject Tribe.Services.ClientServices.ShopServices.ICategoryClientService CategoryClient
+@inject Tribe.Services.ClientServices.ShopServices.IProductClientService ProductClient
+@inject Tribe.Services.ClientServices.ShopServices.IShopCreatorService ShopCreator
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="pa-4">
+    <MudPaper Class="pa-4">
+        <MudText Typo="Typo.h5">Neues Produkt erstellen</MudText>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudStack Spacing="3" Class="mt-4">
+                <MudTextField @bind-Value="_title" Label="Titel" Required="true" />
+                <MudTextField @bind-Value="_description" Label="Beschreibung" Multiline="true" Lines="3" />
+
+                <MudNumericField T="decimal" @bind-Value="_price" Label="Preis (€)" Min="0" Variant="Variant.Outlined" />
+
+                <MudSelect T="string" @bind-Value="_selectedDtoType" Label="Produkttyp" Variant="Variant.Outlined">
+                    <MudSelectItem Value=@("physical")>Physisch</MudSelectItem>
+                    <MudSelectItem Value=@("video")>Video</MudSelectItem>
+                    <MudSelectItem Value=@("image")>Image</MudSelectItem>
+                    <MudSelectItem Value=@("service")>Service</MudSelectItem>
+                    <MudSelectItem Value=@("event_ticket")>Event Ticket</MudSelectItem>
+                </MudSelect>
+
+                <MudTextField @bind-Value="_sku" Label="SKU" />
+                <MudNumericField T="int" @bind-Value="_stock" Label="Lagerbestand" Min="0" />
+
+                <MudSelect T="string" @bind-Value="_selectedCategoryId" Label="Kategorie" Variant="Variant.Outlined">
+                    @foreach (var cat in _categories)
+                    {
+                        <MudSelectItem Value="@cat.Id">@cat.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudText Typo="Typo.subtitle2">Bilder</MudText>
+                <FileUploader OnImageUploaded="HandleImageUploaded" PasteFunc="true" />
+
+                @if (_imageSources.Count > 0)
+                {
+                    <MudStack Row="true" Spacing="2" Class="mt-2">
+                        @foreach (var img in _imageSources)
+                        {
+                            <MudPaper Class="pa-1" Style="width:120px;">
+                                <img src="@img" style="width:100%;height:80px;object-fit:cover;" />
+                                <MudStack Row="true" JustifyContent="JustifyContent.SpaceBetween" Class="mt-1">
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(async () => SetThumbnail(img))">Als Thumbnail</MudButton>
+                                    <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(async () => RemoveImage(img))">Entfernen</MudButton>
+                                </MudStack>
+                                @if (_thumbnailUrl == img)
+                                {
+                                    <MudChip T="string" Color="Color.Primary" Size="Size.Small">Thumbnail</MudChip>
+                                }
+                            </MudPaper>
+                        }
+                    </MudStack>
+                }
+
+                <!-- DTO specific editors -->
+                @if (_selectedDtoType == "physical")
+                {
+                    <MudTextField @bind-Value="_physical_ShippingCost" Label="Versandkosten (€)" />
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        <MudSwitch T="bool" @bind-Checked="_physical_TrackInventory" />
+                        <MudText Typo="Typo.body2">Track Inventory</MudText>
+                    </MudStack>
+                }
+                else if (_selectedDtoType == "video")
+                {
+                    <MudTextField @bind-Value="_video_VideoUrl" Label="Video URL" />
+                }
+
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save" Disabled="!_isValid">Erstellen</MudButton>
+                    <MudButton Variant="Variant.Text" OnClick="Cancel">Abbrechen</MudButton>
+                </MudStack>
+            </MudStack>
+        </MudForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private MudForm? _form;
+    private bool _isValid;
+
+    private string _title = string.Empty;
+    private string? _description;
+    private decimal _price = 0m;
+    private string _sku = string.Empty;
+    private int _stock = 0;
+
+    private List<Tribe.Services.ClientServices.ShopServices.CategoryDto> _categories = new();
+    private string _selectedCategoryId = string.Empty;
+
+    private List<string> _imageSources = new();
+    private string? _thumbnailUrl;
+
+    private string _selectedDtoType = "physical";
+
+    // DTO specific temp fields
+    private decimal _physical_ShippingCost = 0m;
+    private bool _physical_TrackInventory = true;
+    private string _video_VideoUrl = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        try
+        {
+            var cats = await CategoryClient.GetMyCategoriesAsync();
+            _categories = cats ?? new List<Tribe.Services.ClientServices.ShopServices.CategoryDto>();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler beim Laden der Kategorien: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Task HandleImageUploaded(string base64Image)
+    {
+        // add to list and set first image as thumbnail if none set
+        _imageSources.Add(base64Image);
+        if (string.IsNullOrEmpty(_thumbnailUrl)) _thumbnailUrl = base64Image;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task RemoveImage(string image)
+    {
+        _imageSources.Remove(image);
+        if (_thumbnailUrl == image) _thumbnailUrl = _imageSources.FirstOrDefault();
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private Task SetThumbnail(string image)
+    {
+        _thumbnailUrl = image;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private async Task Save()
+    {
+        _form?.Validate();
+        if (!_isValid) return;
+
+        try
+        {
+            // Map DTO to domain product
+            ShopProduct product;
+            if (_selectedDtoType == "physical")
+            {
+                product = new PhysicalProduct
+                {
+                    Title = _title,
+                    Description = _description,
+                    Price = _price,
+                    CreatorProfileId = string.Empty,
+                    CategoryId = string.IsNullOrEmpty(_selectedCategoryId) ? null : _selectedCategoryId,
+                    SKU = string.IsNullOrEmpty(_sku) ? null : _sku,
+                    StockQuantity = _stock,
+                    ShippingCost = _physical_ShippingCost,
+                    TrackInventory = _physical_TrackInventory,
+                    ImageUrls = _imageSources,
+                    ThumbnailUrl = _thumbnailUrl
+                };
+            }
+            else if (_selectedDtoType == "video")
+            {
+                product = new VideoProduct
+                {
+                    Title = _title,
+                    Description = _description,
+                    Price = _price,
+                    CreatorProfileId = string.Empty,
+                    CategoryId = string.IsNullOrEmpty(_selectedCategoryId) ? null : _selectedCategoryId,
+                    ImageUrls = _imageSources,
+                    ThumbnailUrl = _thumbnailUrl,
+                    VideoUrl = _video_VideoUrl
+                };
+            }
+            else
+            {
+                // default generic product
+                product = new PhysicalProduct
+                {
+                    Title = _title,
+                    Description = _description,
+                    Price = _price,
+                    CreatorProfileId = string.Empty,
+                    CategoryId = string.IsNullOrEmpty(_selectedCategoryId) ? null : _selectedCategoryId,
+                    ImageUrls = _imageSources,
+                    ThumbnailUrl = _thumbnailUrl
+                };
+            }
+
+            var created = await ProductClient.CreateProductAsync(product);
+            if (created != null)
+            {
+                Snackbar.Add("Produkt erstellt", Severity.Success);
+                Navigation.NavigateTo("/creator/shop/dashboard");
+            }
+            else
+            {
+                Snackbar.Add("Fehler beim Erstellen des Produkts", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => Navigation.NavigateTo("/creator/shop/dashboard");
+}

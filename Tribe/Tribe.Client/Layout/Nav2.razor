@@ -9,11 +9,26 @@
     <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
     <MudNavLink Href="userdashboard" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">user</MudNavLink>
     <MudNavLink Href="counter" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">Counter</MudNavLink>
+    
     <MudNavGroup Title="User" Expanded="true">
         <MudNavLink Href="UserDashboard">Dashboard</MudNavLink>
         <MudNavLink Href="Creator">creator</MudNavLink>
         <MudNavLink Href="UserSensitiv">Security</MudNavLink>
     </MudNavGroup>
+    
+    <!-- Shop Management Navigation (nur für Creators) -->
+    <AuthorizeView>
+        <Authorized>
+            <MudNavGroup Title="Shop" Expanded="false" Icon="@Icons.Material.Filled.Store">
+                <MudNavLink Href="creator/shop/products" Icon="@Icons.Material.Filled.ShoppingCart">Meine Produkte</MudNavLink>
+                <MudNavLink Href="creator/shop/categories" Icon="@Icons.Material.Filled.Category">Kategorien</MudNavLink>
+                <MudNavLink Href="creator/shop/orders" Icon="@Icons.Material.Filled.Receipt">Bestellungen</MudNavLink>
+                <MudDivider Class="my-2" />
+                <MudNavLink Href="creator/shop/dashboard" Icon="@Icons.Material.Filled.Dashboard">Shop Dashboard</MudNavLink>
+            </MudNavGroup>
+        </Authorized>
+    </AuthorizeView>
+    
     <MudNavLink Href="weather" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.List">Weather</MudNavLink>
     <MudNavLink Href="auth" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Lock">Auth Required</MudNavLink>
 

@@ -1,4 +1,6 @@
-﻿using System.Net.Http.Headers;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using System.Net.Http.Headers;
 using System.Net.Http.Json; // New using statement for JSON extensions
 using System.Text.Json;
 
@@ -24,10 +26,12 @@ namespace Tribe.Client.Services
     {
         private readonly HttpClient _httpClient;
         private readonly JsonSerializerOptions _jsonOptions;
+        private readonly ILogger<ApiService> _logger;
 
-        public ApiService(HttpClient httpClient)
+        public ApiService(HttpClient httpClient, ILogger<ApiService>? logger = null)
         {
             _httpClient = httpClient;
+            _logger = logger ?? NullLogger<ApiService>.Instance;
             _jsonOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -49,12 +53,17 @@ namespace Tribe.Client.Services
             try
             {
                 var response = await _httpClient.GetAsync(endpoint);
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("GET {Endpoint} returned {StatusCode}: {Content}", endpoint, response.StatusCode, content);
+                    return default;
+                }
                 return await response.Content.ReadFromJsonAsync<T>(_jsonOptions);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // General exception handling for network or serialization errors.
+                _logger.LogError(ex, "GetAsync failed for {Endpoint}", endpoint);
                 return default;
             }
         }
@@ -63,13 +72,18 @@ namespace Tribe.Client.Services
         {
             try
             {
-                // Using PostAsJsonAsync for simpler and cleaner code
                 var response = await _httpClient.PostAsJsonAsync(endpoint, data, _jsonOptions);
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("POST {Endpoint} returned {StatusCode}: {Content}", endpoint, response.StatusCode, content);
+                    return default;
+                }
                 return await response.Content.ReadFromJsonAsync<TResponse>(_jsonOptions);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "PostAsync failed for {Endpoint}", endpoint);
                 return default;
             }
         }
@@ -86,10 +100,16 @@ namespace Tribe.Client.Services
             try
             {
                 var response = await _httpClient.PutAsJsonAsync(endpoint, data, _jsonOptions);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("PUT {Endpoint} returned {StatusCode}: {Content}", endpoint, response.StatusCode, content);
+                }
                 return response.IsSuccessStatusCode;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "PutAsync failed for {Endpoint}", endpoint);
                 return false;
             }
         }
@@ -104,10 +124,16 @@ namespace Tribe.Client.Services
             try
             {
                 var response = await _httpClient.DeleteAsync(endpoint);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("DELETE {Endpoint} returned {StatusCode}: {Content}", endpoint, response.StatusCode, content);
+                }
                 return response.IsSuccessStatusCode;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "DeleteAsync failed for {Endpoint}", endpoint);
                 return false;
             }
         }

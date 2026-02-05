@@ -1,0 +1,226 @@
+@using MudBlazor
+@using Tribe.Bib.Models.TribeRelated
+@using System.Security.Claims
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject Tribe.Services.ClientServices.ShopServices.IRaffleClientService RaffleClient
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+    <MudStack Spacing="3">
+        <!-- Header -->
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+            <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Size="Size.Large" Color="Color.Primary" />
+            <MudText Typo="Typo.h4">Raffles Management</MudText>
+            <MudSpacer />
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" OnClick="CreateNewRaffle">
+                Neue Raffle
+            </MudButton>
+        </MudStack>
+
+        <!-- Loading State -->
+        @if (_isLoading)
+        {
+            <MudProgressCircular Indeterminate="true" />
+        }
+        <!-- Empty State -->
+        else if (_raffles.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" ShowCloseIcon="false">
+                <MudStack>
+                    <MudText>Keine Raffles vorhanden. Erstellen Sie eine neue Raffle, um Ihren Kunden ein spannendes Gewinnspiel zu bieten!</MudText>
+                    <MudButton Color="Color.Primary" Size="Size.Small" OnClick="CreateNewRaffle" StartIcon="@Icons.Material.Filled.Add">
+                        Erste Raffle erstellen
+                    </MudButton>
+                </MudStack>
+            </MudAlert>
+        }
+        <!-- Raffles List -->
+        else
+        {
+            <MudDataGrid Items="_raffles" Hover="true" Class="rounded-lg">
+                <Columns>
+                    <PropertyColumn Property="x => x.Title" Title="Titel" Sortable="true">
+                        <CellTemplate>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body2" Style="font-weight: bold;">@context.Item.Title</MudText>
+                                <MudText Typo="Typo.caption">@(context.Item.Description != null ? context.Item.Description.Substring(0, Math.Min(50, context.Item.Description.Length)) : "Keine Beschreibung")...</MudText>
+                            </MudStack>
+                        </CellTemplate>
+                    </PropertyColumn>
+
+                    <PropertyColumn Property="x => x.EndDate" Title="Enddatum" Sortable="true">
+                        <CellTemplate>
+                            <MudText>@(context.Item.EndDate.HasValue ? context.Item.EndDate.Value.ToString("dd.MM.yyyy HH:mm") : "-")</MudText>
+                        </CellTemplate>
+                    </PropertyColumn>
+
+                    <PropertyColumn Property="x => x.CurrentEntries" Title="Einträge" Sortable="true">
+                        <CellTemplate>
+                            <MudChip Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Small">
+                                @context.Item.CurrentEntries / @context.Item.MaxEntries
+                            </MudChip>
+                        </CellTemplate>
+                    </PropertyColumn>
+
+                    <PropertyColumn Property="x => x.Status" Title="Status" Sortable="true">
+                        <CellTemplate>
+                            <MudChip Size="Size.Small" Color="GetStatusColor(context.Item.Status)">
+                                @context.Item.Status
+                            </MudChip>
+                        </CellTemplate>
+                    </PropertyColumn>
+
+                    <PropertyColumn Property="x => x.PrizeValue" Title="Preis" Sortable="true">
+                        <CellTemplate>
+                            <MudText>€@context.Item.PrizeValue.ToString("F2")</MudText>
+                        </CellTemplate>
+                    </PropertyColumn>
+
+                    <TemplateColumn Title="Aktionen" Sortable="false">
+                        <CellTemplate>
+                            <MudStack Row="true" Spacing="1">
+                                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(async () => await EditRaffle(context.Item.Id))" Title="Bearbeiten">
+                                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+                                </MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(async () => await BindToProduct(context.Item.Id))" Title="An Produkt binden">
+                                    <MudIcon Icon="@Icons.Material.Filled.Link" Size="Size.Small" />
+                                </MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(async () => await DeleteRaffle(context.Item.Id))" Title="Löschen">
+                                    <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" />
+                                </MudButton>
+                            </MudStack>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+            </MudDataGrid>
+        }
+    </MudStack>
+</MudContainer>
+
+@code {
+    private List<Raffle> _raffles = new();
+    private bool _isLoading = false;
+    private string? _creatorId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user?.FindFirst(ClaimTypes.NameIdentifier)?.Value is string userId)
+        {
+            _creatorId = userId;
+            await LoadRaffles();
+        }
+        else
+        {
+            // Not authenticated: ensure loading spinner is not shown indefinitely
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadRaffles()
+    {
+        try
+        {
+            _isLoading = true;
+            _raffles = await RaffleClient.GetCreatorRafflesAsync() ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task CreateNewRaffle()
+    {
+        var parameters = new DialogParameters<RaffleEditDialog> 
+        { 
+            { x => x.Raffle, new Raffle { CreatorProfileId = _creatorId ?? string.Empty } } 
+        };
+        var dialog = await DialogService.ShowAsync<RaffleEditDialog>("Neue Raffle erstellen", parameters);
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            await LoadRaffles();
+            Snackbar.Add("Raffle erfolgreich erstellt", Severity.Success);
+        }
+    }
+
+    private async Task EditRaffle(string raffleId)
+    {
+        var raffle = _raffles.FirstOrDefault(r => r.Id == raffleId);
+        if (raffle == null) return;
+
+        var parameters = new DialogParameters<RaffleEditDialog> 
+        { 
+            { x => x.Raffle, raffle } 
+        };
+        var dialog = await DialogService.ShowAsync<RaffleEditDialog>("Raffle bearbeiten", parameters);
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            await LoadRaffles();
+            Snackbar.Add("Raffle erfolgreich aktualisiert", Severity.Success);
+        }
+    }
+
+    private async Task BindToProduct(string raffleId)
+    {
+        var parameters = new DialogParameters<RaffleBindProductDialog> 
+        { 
+            { x => x.RaffleId, raffleId } 
+        };
+        var dialog = await DialogService.ShowAsync<RaffleBindProductDialog>("Raffle an Produkt binden", parameters);
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Raffle erfolgreich an Produkt gebunden", Severity.Success);
+        }
+    }
+
+    private async Task DeleteRaffle(string raffleId)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Bestätigung", 
+            "Möchten Sie diese Raffle wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+            yesText: "Ja, löschen", cancelText: "Abbrechen");
+        
+        if (confirmed != true) return;
+
+        try
+        {
+            var success = await RaffleClient.DeleteRaffleAsync(raffleId);
+            if (success)
+            {
+                Snackbar.Add("Raffle gelöscht", Severity.Success);
+                await LoadRaffles();
+            }
+            else
+            {
+                Snackbar.Add("Fehler beim Löschen", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Color GetStatusColor(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "active" => Color.Success,
+            "ended" => Color.Warning,
+            "drawn" => Color.Info,
+            "cancelled" => Color.Error,
+            _ => Color.Default
+        };
+    }
+}

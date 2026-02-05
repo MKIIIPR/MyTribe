@@ -12,15 +12,15 @@ using Tribe.Data;
 namespace Tribe.Migrations
 {
     [DbContext(typeof(ShopDbContext))]
-    [Migration("20250817102223_ds")]
-    partial class ds
+    [Migration("20260204232638_AddCategoryIdToShopProduct")]
+    partial class AddCategoryIdToShopProduct
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.8")
+                .HasAnnotation("ProductVersion", "9.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -241,6 +241,9 @@ namespace Tribe.Migrations
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CategoryId")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");

@@ -6,6 +6,7 @@ using Tribe.Services.ClientServices;
 using Tribe.Services.ClientServices.SimpleAuth;
 using Tribe.Services.States;
 using Tribe.Ui;
+using Tribe.Services.ClientServices.ShopServices;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -28,6 +29,16 @@ builder.Services.AddScoped<IAuthService, SimplifiedAuthService>();
 builder.Services.AddScoped<IUserApiService, UserApiService>();
 builder.Services.AddScoped<IApiService, ApiService>();
 builder.Services.AddScoped<IClientApiService, ClientApiService>();
+// Product client service for interacting with server-side Products API
+builder.Services.AddScoped<IProductClientService, ProductClientService>();
+// Category and Order client services
+builder.Services.AddScoped<ICategoryClientService, CategoryClientService>();
+builder.Services.AddScoped<IOrderClientService, OrderClientService>();
+// Unified shop creator facade
+builder.Services.AddScoped<IShopCreatorService, Tribe.Services.ClientServices.ShopServices.ShopCreatorService>();
+builder.Services.AddScoped<IRaffleClientService, RaffleClientService>();
+// Shop UI service for cart + local state
+builder.Services.AddSingleton<ShopService>();
 #endregion
 
 #region SignalR & State

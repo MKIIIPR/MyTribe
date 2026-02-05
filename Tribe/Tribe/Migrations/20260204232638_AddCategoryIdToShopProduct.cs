@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Tribe.Migrations
 {
     /// <inheritdoc />
-    public partial class ds : Migration
+    public partial class AddCategoryIdToShopProduct : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -88,6 +88,7 @@ namespace Tribe.Migrations
                     ThumbnailUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ImageUrls = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Tags = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CategoryId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     SeoTitle = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     SeoDescription = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatorProfileId = table.Column<string>(type: "nvarchar(450)", nullable: false),

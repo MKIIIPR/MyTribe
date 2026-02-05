@@ -9,9 +9,10 @@ namespace Tribe.Services.ServerServices;
 
 public interface IJwtTokenService
 {
-    string GenerateToken(ApplicationUser user);
+    string GenerateToken(TribeUser user, string? profileId = null);
     bool ValidateToken(string token);
 }
+
 public class JwtTokenService : IJwtTokenService
 {
     private readonly IConfiguration _configuration;
@@ -21,9 +22,8 @@ public class JwtTokenService : IJwtTokenService
         _configuration = configuration;
     }
 
-    public string GenerateToken(ApplicationUser user)
+    public string GenerateToken(TribeUser user, string? profileId = null)
     {
-        
         var jwtSettings = _configuration.GetSection("JwtSettings");
         var secretKey = jwtSettings["SecretKey"];
         var issuer = jwtSettings["Issuer"];
@@ -32,14 +32,22 @@ public class JwtTokenService : IJwtTokenService
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(secretKey);
 
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.Id),
+            new Claim(ClaimTypes.Name, user.DisplayName!),
+            
+        };
+
+        // TribeUser.Id / CreatorProfile.Id hinzufügen
+        if (!string.IsNullOrEmpty(profileId))
+        {
+            claims.Add(new Claim("profileId", profileId));
+        }
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.UserName!),
-                new Claim(ClaimTypes.Email, user.Email!)
-            }),
+            Subject = new ClaimsIdentity(claims),
             Expires = DateTime.UtcNow.AddHours(24),
             Issuer = issuer,
             Audience = audience,

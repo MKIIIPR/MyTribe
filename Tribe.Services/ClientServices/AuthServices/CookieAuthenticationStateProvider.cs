@@ -137,6 +137,16 @@ namespace Tribe.Services.ClientServices.SimpleAuth
             NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
         }
 
+        /// <summary>
+        /// Öffentliche Methode zum Aktualisieren des AuthState nach Login/Logout
+        /// </summary>
+        public Task NotifyAuthStateChangedAsync()
+        {
+            _logger.LogInformation("NotifyAuthStateChangedAsync called - refreshing auth state");
+            RefreshAuthState();
+            return Task.CompletedTask;
+        }
+
         private AuthenticationState CreateAnonymousState()
             => new(new ClaimsPrincipal(new ClaimsIdentity()));
 

@@ -1,0 +1,179 @@
+@using MudBlazor
+@using System.Security.Claims
+@using Tribe.Bib.Models.TribeRelated
+@inject Tribe.Services.ClientServices.ShopServices.IShopCreatorService ShopCreator
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="@_isFormValid">
+            <MudStack Spacing="3">
+                <!-- Titel -->
+                <MudTextField 
+                    @bind-Value="Raffle.Title" 
+                    Label="Raffle Titel *" 
+                    Placeholder="z.B. Gaming Gewinnspiel"
+                    Required="true"
+                    Variant="Variant.Outlined"
+                    HelperText="Geben Sie einen aussagekräftigen Titel ein" />
+
+                <!-- Preis Beschreibung -->
+                <MudTextField 
+                    @bind-Value="Raffle.PrizeDescription" 
+                    Label="Beschreibung des Preises *" 
+                    Placeholder="z.B. RTX 4090 Grafikkarte"
+                    Required="true"
+                    Multiline="true"
+                    Lines="3"
+                    Variant="Variant.Outlined"
+                    HelperText="Was gewinnt der Gewinner?" />
+
+                <!-- Preis Wert -->
+                <MudNumericField 
+                    @bind-Value="Raffle.PrizeValue" 
+                    Label="Preiswert (€)"
+                    Variant="Variant.Outlined"
+                    Min="0"
+                    Step="10"
+                    Format="F2" />
+
+                <!-- Anzahl Gewinner -->
+                <MudNumericField 
+                    @bind-Value="Raffle.PrizeCount" 
+                    Label="Anzahl Gewinner"
+                    Variant="Variant.Outlined"
+                    Min="1"
+                    Max="10" />
+
+                <!-- Startdatum -->
+                <MudDatePicker Date="@Raffle.StartDate" DateChanged="@( (DateTime? d) => Raffle.StartDate = d )" DateExpression="() => Raffle.StartDate"
+                    Label="Startdatum" Variant="Variant.Outlined" HelperText="Wann beginnt die Raffle?" />
+
+                <!-- Enddatum -->
+                <MudDatePicker  Date="@Raffle.EndDate" DateChanged="@( (DateTime? d) => Raffle.EndDate = d )" DateExpression="() => Raffle.EndDate"
+                    Label="Enddatum *" Variant="Variant.Outlined" HelperText="Wann endet die Raffle?" />
+
+                <!-- Max Einträge -->
+                <MudNumericField 
+                    @bind-Value="Raffle.MaxEntries" 
+                    Label="Maximale Einträge"
+                    Variant="Variant.Outlined"
+                    Min="1"
+                    Max="100000"
+                    HelperText="Wie viele Tickets maximal?" />
+
+                <!-- Raffletyp -->
+                <MudText Typo="Typo.subtitle2" Class="mt-3">Raffletyp</MudText>
+                <MudRadioGroup @bind-Value="Raffle.RaffleType" Class="mb-4">
+                    <MudStack>
+                        <MudRadio T="string" Option="@Standard" Color="Color.Primary">
+                            <MudStack Row="true" Spacing="1">
+                                <MudText Typo="Typo.body2"><strong>Standard</strong></MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">1 Gewinner, einfache Verlosung</MudText>
+                            </MudStack>
+                        </MudRadio>
+                        <MudRadio T="string" Option="@Multiple" Color="Color.Primary">
+                            <MudStack Row="true" Spacing="1">
+                                <MudText Typo="Typo.body2"><strong>Multiple</strong></MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Mehrere Gewinner möglich</MudText>
+                            </MudStack>
+                        </MudRadio>
+                    </MudStack>
+                </MudRadioGroup>
+
+                <!-- Beschreibung der Raffle -->
+                <MudTextField 
+                    @bind-Value="Raffle.Description" 
+                    Label="Zusätzliche Beschreibung (optional)"
+                    Placeholder="z.B. Teilnahmebedingungen, Regeln, etc."
+                    Multiline="true"
+                    Lines="3"
+                    Variant="Variant.Outlined"
+                    MaxLength="1000" />
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Abbrechen</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save" Disabled="!_isFormValid">
+            @(string.IsNullOrEmpty(Raffle.Id) ? "Erstellen" : "Speichern")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    public IMudDialogInstance MudDialog { get; set; } = default!;
+    
+    [Parameter] 
+    public Raffle Raffle { get; set; } = new();
+
+    private MudForm? _form;
+    private bool _isFormValid;
+    private const string Standard = "Standard";
+    private const string Multiple = "Multiple";
+
+    protected override void OnInitialized()
+    {
+        if (string.IsNullOrEmpty(Raffle.Id))
+        {
+            // Neue Raffle
+            Raffle.StartDate = DateTime.UtcNow;
+            Raffle.EndDate = DateTime.UtcNow.AddDays(7);
+            Raffle.MaxEntries = 1000;
+            Raffle.PrizeCount = 1;
+            Raffle.RaffleType = Standard;
+        }
+    }
+
+    private async Task Save()
+    {
+        // Validate form and rely on bound _isFormValid
+        _form?.Validate();
+        if (!_isFormValid)
+            return;
+
+        try
+        {
+            // Ensure CreatorProfileId is set (in case caller didn't pass it)
+            if (string.IsNullOrEmpty(Raffle.CreatorProfileId))
+            {
+                var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+                var user = auth.User;
+                var uid = user?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(uid))
+                    Raffle.CreatorProfileId = uid;
+            }
+
+            var isNew = string.IsNullOrEmpty(Raffle.Id);
+            if (isNew)
+            {
+                var created = await ShopCreator.CreateRaffleAsync(Raffle);
+                if (created != null)
+                {
+                    MudDialog.Close(DialogResult.Ok(Raffle));
+                    return;
+                }
+                Snackbar.Add("Fehler beim Erstellen der Raffle", Severity.Error);
+            }
+            else
+            {
+                var ok = await ShopCreator.UpdateRaffleAsync(Raffle.Id, Raffle);
+                if (ok)
+                {
+                    MudDialog.Close(DialogResult.Ok(Raffle));
+                    return;
+                }
+                Snackbar.Add("Fehler beim Aktualisieren der Raffle", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}
