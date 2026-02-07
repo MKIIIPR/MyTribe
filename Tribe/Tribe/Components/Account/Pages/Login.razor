@@ -1,19 +1,19 @@
 ﻿@page "/Account/Login"
 @using System.ComponentModel.DataAnnotations
-@using System.Net.Http.Json
 @using Microsoft.AspNetCore.Authentication
-@using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using Tribe.Bib.Models.TribeRelated
 @using Tribe.Data
-@using Tribe.Services
 @using Tribe.Services.ServerServices
-@using static Tribe.Bib.CommunicationModels.ComModels
 
-@inject IHttpClientFactory HttpClientFactory
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IJwtTokenService JwtTokenService
+@inject IAuthNotificationService AuthNotificationService
+@inject ApplicationDbContext Context
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
-@inject IJSRuntime JS
 
 <PageTitle>Log in</PageTitle>
 
@@ -85,55 +85,55 @@
 
     public async Task LoginUser()
     {
-        try
+        // 1. Prüfe Passwort über Identity
+        var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+
+        if (result.Succeeded)
         {
-            // API-Login aufrufen
-            var client = HttpClientFactory.CreateClient();
-            client.BaseAddress = new Uri(NavigationManager.BaseUri);
-
-            var loginRequest = new LoginRequest
+            var user = await SignInManager.UserManager.FindByEmailAsync(Input.Email);
+            if (user != null)
             {
-                Email = Input.Email,
-                Password = Input.Password
-            };
+                // 2. TribeUser laden
+                var tribeUser = await Context.TribeUsers
+                    .FirstOrDefaultAsync(t => t.ApplicationUserId == user.Id);
 
-            var response = await client.PostAsJsonAsync("api/auth/login", loginRequest);
+                // 3. JWT mit profileId generieren
+                var token = JwtTokenService.GenerateToken(tribeUser);
 
-            if (response.IsSuccessStatusCode)
-            {
-                var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                // 4. Last login aktualisieren
+                user.LastLoginAt = DateTime.UtcNow;
+                await SignInManager.UserManager.UpdateAsync(user);
 
-                Logger.LogInformation("User {UserName} logged in via API. ProfileId: {ProfileId}", 
-                    loginResponse?.UserName, loginResponse?.ProfileId);
-
-                // Cookie aus API-Response an Client weiterleiten
-                if (response.Headers.TryGetValues("Set-Cookie", out var cookies))
+                // 5. Cookie direkt setzen
+                HttpContext.Response.Cookies.Append("jwt_token", token, new CookieOptions
                 {
-                    foreach (var cookie in cookies)
-                    {
-                        HttpContext.Response.Headers.Append("Set-Cookie", cookie);
-                    }
-                }
+                    HttpOnly = false,
+                    Secure = HttpContext.Request.IsHttps,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTime.UtcNow.AddHours(24),
+                    Path = "/"
+                });
 
-                // Redirect zur Zielseite
-                RedirectManager.RedirectTo(ReturnUrl ?? "/");
+                // 6. SignalR Notification
+                await AuthNotificationService.NotifyUserLoggedInAsync(user.Id, user.UserName!);
+
+                Logger.LogInformation("User {UserName} logged in. ProfileId: {ProfileId}", user.UserName, tribeUser?.Id);
             }
-            else
-            {
-                var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-                errorMessage = error?.Message ?? "Error: Invalid login attempt.";
-                Logger.LogWarning("LOGIN_FAILED: Email={Email}, Error={Error}", Input.Email, errorMessage);
-            }
+
+            RedirectManager.RedirectTo(ReturnUrl);
         }
-        catch (NavigationException)
+        else if (result.RequiresTwoFactor)
         {
-            // NavigationException ist erwartet bei Redirect - ignorieren
-            throw;
+            RedirectManager.RedirectTo("Account/LoginWith2fa", new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
         }
-        catch (Exception ex)
+        else if (result.IsLockedOut)
         {
-            Logger.LogError(ex, "LOGIN_ERROR: Email={Email}", Input.Email);
-            errorMessage = "Error: An error occurred during login.";
+            Logger.LogWarning("User account locked out.");
+            RedirectManager.RedirectTo("Account/Lockout");
+        }
+        else
+        {
+            errorMessage = "Error: Invalid login attempt.";
         }
     }
 
@@ -149,10 +149,5 @@
 
         [Display(Name = "Remember me?")]
         public bool RememberMe { get; set; }
-    }
-
-    private sealed class ErrorResponse
-    {
-        public string? Message { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using static Tribe.Bib.ShopRelated.ShopStruckture;
 
 namespace Tribe.Services.ClientServices.ShopServices
 {
@@ -14,6 +15,34 @@ namespace Tribe.Services.ClientServices.ShopServices
         public List<string> Tags { get; set; } = new();
         public string? SeoTitle { get; set; }
         public string? SeoDescription { get; set; }
+        public string ProductType { get; set; } = "physical";
+        public string? Id { get; set; }
+        public decimal? OriginalPrice { get; set; }
+        public string Status { get; set; } = ProductStatus.Draft;
+
+        // Physical specific
+        public string? SKU { get; set; }
+        public int StockQuantity { get; set; }
+        public bool TrackInventory { get; set; } = true;
+        public decimal ShippingCost { get; set; }
+        public bool FreeShippingOver { get; set; }
+        public decimal FreeShippingThreshold { get; set; }
+
+        // Video specific
+        public string? VideoUrl { get; set; }
+
+        // Image specific
+        public List<string>? HighResImageUrls { get; set; }
+        public string? ImageFormat { get; set; }
+
+        // Service specific
+        public int DurationMinutes { get; set; }
+
+        // Event ticket specific
+        public DateTime? EventDate { get; set; }
+        public DateTime? EventEndDate { get; set; }
+        public string? EventLocation { get; set; }
+        public int MaxTickets { get; set; }
     }
 
     public class PhysicalProductDto : ProductDto

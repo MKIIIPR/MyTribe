@@ -39,6 +39,8 @@ namespace Tribe.Data
         public DbSet<CreatorPlanPricing> CreatorPlanPricings{ get; set; }
         public DbSet<CreatorToken> CreatorTokens { get; set; }
         public DbSet<ProfileTokenHolding> ProfileTokenHoldings { get; set; }
+        public DbSet<AffiliatePartner> AffiliatePartner { get; set; }
+        public DbSet<CreatorPlacement> CreatorPlacement { get; set; }
 
         public DbSet<Raffle> Raffles { get; set; }
         public DbSet<RaffleTokenRequirement> RaffleTokenRequirements { get; set; }
@@ -90,14 +92,20 @@ namespace Tribe.Data
                 entity.HasIndex(e => e.ApplicationUserId).IsUnique();
                 entity.HasIndex(e => e.DisplayName);
 
-                
+                entity.HasOne(e => e.CreatorProfile)
+                    .WithOne(cp => cp.TribeUser)
+                    .HasForeignKey<CreatorProfile>(cp => cp.Id)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             builder.Entity<CreatorProfile>(entity =>
             {
-                
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).ValueGeneratedNever();
+                entity.ToTable("CreatorProfiles");
                 entity.Property(e => e.CreatorName).HasMaxLength(100);
-                entity.HasIndex(e => e.CreatorName).IsUnique()
+                entity.HasIndex(e => e.CreatorName)
+                      .IsUnique()
                       .HasFilter("[CreatorName] IS NOT NULL");
             });
 

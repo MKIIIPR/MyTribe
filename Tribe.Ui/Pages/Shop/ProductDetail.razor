@@ -1,13 +1,16 @@
 @page "/shop/product/{ProductId}"
 @using MudBlazor
+@using Tribe.Bib.Models.TribeRelated
 @using Tribe.Bib.ShopRelated
 @using Tribe.Services.ClientServices.ShopServices
 @using static Tribe.Bib.ShopRelated.ShopStruckture
 @inject IProductClientService ProductClient
+@inject IRaffleClientService RaffleService
 @inject ShopService ShopService
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject IRaffleClientService RaffleService
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
     @if (_isLoading)
@@ -68,6 +71,21 @@
                             </MudText>
                         }
 
+                        @if (_boundRaffle != null)
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3">
+                                <MudText Typo="Typo.subtitle2">Verknüpfte Raffle</MudText>
+                                <MudText Typo="Typo.h6">@_boundRaffle.Title</MudText>
+                                <MudText Typo="Typo.body2">@(_boundRaffle.PrizeName ?? "Kein Preis angegeben")</MudText>
+                                <MudText Typo="Typo.caption">
+                                    Typ: @_boundRaffle.RaffleType<br />
+                                    Status: @_boundRaffle.Status<br />
+                                    Zeitraum: @(_boundRaffle.StartDate?.ToLocalTime().ToString("dd.MM.yyyy"))
+                                    - @(_boundRaffle.EndDate?.ToLocalTime().ToString("dd.MM.yyyy"))
+                                </MudText>
+                            </MudAlert>
+                        }
+
                         <MudNumericField T="int" @bind-Value="_quantity" Label="Menge" Min="1" />
 
                         <MudStack Row="true" Spacing="2" Class="mt-4">
@@ -116,6 +134,7 @@
     [Parameter] public string? ProductId { get; set; }
     private ShopProduct? _product;
     private List<ProductReview> _reviews = new();
+    private Raffle? _boundRaffle;
     private int _quantity = 1;
     private bool _isLoading = true;
 
@@ -124,6 +143,7 @@
         if (!string.IsNullOrEmpty(ProductId))
         {
             await LoadProduct();
+            await LoadBoundRaffle();
             await LoadReviews();
         }
     }
@@ -142,6 +162,24 @@
         finally
         {
             _isLoading = false;
+        }
+    }
+
+    private async Task LoadBoundRaffle()
+    {
+        if (string.IsNullOrEmpty(ProductId))
+        {
+            _boundRaffle = null;
+            return;
+        }
+
+        try
+        {
+            _boundRaffle = await RaffleService.GetProductRaffleAsync(ProductId);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Raffle konnte nicht geladen werden: {ex.Message}", Severity.Warning);
         }
     }
 

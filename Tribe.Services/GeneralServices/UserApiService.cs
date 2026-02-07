@@ -17,14 +17,14 @@ namespace Tribe.Client.Services
     public class UserApiService : IUserApiService
     {
         private readonly IApiService _apiService;
-        private readonly ILogger<ClientApiService>? _logger;
+        private readonly ILogger<UserApiService>? _logger;
         private readonly HttpClient _httpClient;
 
-        public UserApiService(IApiService apiService, ILogger<ClientApiService>? logger = null, HttpClient? httpClient = null)
+        public UserApiService(IApiService apiService, HttpClient httpClient, ILogger<UserApiService>? logger = null)
         {
             _apiService = apiService;
             _logger = logger;
-            _httpClient = httpClient ?? GetHttpClientFromApiService();
+            _httpClient = httpClient;
         }
 
         public async Task<TribeUser?> GetProfileAsync()
@@ -120,16 +120,5 @@ namespace Tribe.Client.Services
                 return default;
             }
         }
-        private HttpClient GetHttpClientFromApiService()
-        {
-            var field = _apiService.GetType().GetField("_httpClient",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (field == null)
-            {
-                _logger?.LogWarning("HttpClient field not found in IApiService");
-                throw new InvalidOperationException("HttpClient field not found in IApiService");
             }
-            return (HttpClient)field.GetValue(_apiService)!;
         }
-    }
-}

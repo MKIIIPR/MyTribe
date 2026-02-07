@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,7 @@ namespace Tribe.Controller.ShopController
 {
     [ApiController]
     [Route("api/shop/categories")]
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class ShopCategoriesController : ControllerBase
     {
         private readonly ShopDbContext _context;
@@ -21,7 +22,7 @@ namespace Tribe.Controller.ShopController
             _logger = logger;
         }
 
-        private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        private string GetUserId() => User.FindFirstValue("profileId") ?? string.Empty;
 
         [HttpGet]
         public async Task<IActionResult> GetMyCategories()

@@ -10,9 +10,14 @@ namespace Tribe.DTOs
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
         public decimal Price { get; set; }
+        public decimal? OriginalPrice { get; set; }
+        public string Status { get; set; } = "draft";
         public string? CategoryId { get; set; }
         public List<string> ImageUrls { get; set; } = new();
         public string? ThumbnailUrl { get; set; }
+        public List<string> Tags { get; set; } = new();
+        public string? SeoTitle { get; set; }
+        public string? SeoDescription { get; set; }
 
         // Physical specific
         public string? SKU { get; set; }

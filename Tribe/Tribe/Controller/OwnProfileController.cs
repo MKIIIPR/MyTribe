@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Tribe.Bib.Models.TribeRelated;
@@ -9,7 +10,7 @@ namespace Tribe.Controller
 {
     [ApiController]
     [Route("api/own")]
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class OwnProfileController : ControllerBase
     {
         private readonly IOwnProfileService _profileService;
@@ -107,9 +108,9 @@ namespace Tribe.Controller
                 return NotFound(new { Message = "Profil existiert nicht. Bitte erstellen." });
             }
 
-            if (profile.ApplicationUserId != userId)
+            if (profile.Id != userId)
             {
-                _logger.LogWarning("User {UserId} versucht, Profil mit ID {ProfileId} zu ändern", userId, profile.Id);
+                _logger.LogWarning("User {ProfileId} versucht, fremdes Profil {TargetProfileId} zu ändern", userId, profile.Id);
                 return Forbid();
             }
 
@@ -128,8 +129,7 @@ namespace Tribe.Controller
 
         private string? GetCurrentUserId()
         {
-            return User.FindFirstValue(ClaimTypes.NameIdentifier)
-                   ?? User.FindFirstValue("sub");
+            return User.FindFirstValue("profileId");
         }
     }
 }

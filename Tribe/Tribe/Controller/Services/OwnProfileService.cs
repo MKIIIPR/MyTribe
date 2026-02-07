@@ -34,7 +34,7 @@ namespace Tribe.Controller.Services
             {
                 // 1. Suche nach dem TribeProfile
                 var profile = await _context.TribeUsers
-                    .FirstOrDefaultAsync(p => p.ApplicationUserId == sub.TribeProfileId);
+                    .FirstOrDefaultAsync(p => p.Id == sub.TribeProfileId);
                 // 2. Wenn kein Profil gefunden wird, erstelle ein neues
                 if (profile == null)
                 {
@@ -48,6 +48,10 @@ namespace Tribe.Controller.Services
                 sub.TribeProfileId = profile.Id; // Sicherstellen, dass die ID korrekt gesetzt ist
                 profile.ActiveCreatorSubscription = sub;
                 profile.UpdatedAt = DateTime.UtcNow;
+                profile.IsCreator = true;
+                profile.ProfileType = Constants.ProfileTypes.Creator;
+
+                await EnsureCreatorProfileAsync(profile.Id, true);
                 profile.ActiveCreatorSubscription.StartDate= DateTime.UtcNow; // Setze das Flag für CreatorApplication
 
 
@@ -59,47 +63,35 @@ namespace Tribe.Controller.Services
             {
                 _logger.LogError(ex, "Fehler bei der CreatorApplication für User {UserId}", sub.TribeProfileId);
                 return false;
-                throw;
             }
             return true;
         }
-        public async Task<TribeUser?> GetOwnProfile(string userId)
+        public async Task<TribeUser?> GetOwnProfile(string profileId)
         {
-            if (string.IsNullOrEmpty(userId))
-                throw new ArgumentException("User ID darf nicht null oder leer sein.", nameof(userId));
+            if (string.IsNullOrEmpty(profileId))
+                throw new ArgumentException("Profile ID darf nicht null oder leer sein.", nameof(profileId));
 
             try
             {
-                // 1. Suche nach dem TribeProfile anhand der ApplicationUserId
+                // Suche nach dem TribeProfile anhand der TribeUser.Id (profileId aus JWT)
                 var profile = await _context.TribeUsers
-                    .FirstOrDefaultAsync(p => p.ApplicationUserId == userId);
+                    .FirstOrDefaultAsync(p => p.Id == profileId);
 
-                // 2. Wenn kein Profil gefunden wird, erstelle ein neues
                 if (profile == null)
                 {
-                    profile = new TribeUser
-                    {
-                        ApplicationUserId = userId,
-                        DisplayName = "Neuer Benutzer",
-                        ProfileType = Constants.ProfileTypes.Regular,
-                        IsCreator = false,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    };
-
-                    // 3. Neues Profil zur Datenbank hinzufügen und speichern
-                    _context.TribeUsers.Add(profile);
-                    await _context.SaveChangesAsync();
-                    
-                    _logger.LogInformation("Neues TribeUser-Profil erstellt für ApplicationUserId {UserId}", userId);
+                    return null;
                 }
 
-                // 4. Das gefundene oder neu erstellte Profil zurückgeben
+                if (profile.IsCreator)
+                {
+                    profile.CreatorProfile = await _context.CreatorProfiles.FindAsync(profile.Id);
+                }
+
                 return profile;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Fehler beim Laden oder Erstellen des Profils für User {UserId}", userId);
+                _logger.LogError(ex, "Fehler beim Laden des Profils für ProfileId {ProfileId}", profileId);
                 throw;
             }
         }
@@ -151,11 +143,10 @@ namespace Tribe.Controller.Services
 
             try
             {
-                // Alle Felder aktualisieren (außer ID und Navigation Properties)
+                // Alle Felder aktualisieren (außer ID, IsCreator und Navigation Properties)
                 existing.DisplayName = profile.DisplayName;
                 existing.Bio = profile.Bio;
-                existing.ProfileType = profile.ProfileType;
-                existing.IsCreator = profile.IsCreator;
+                // IsCreator wird NICHT vom Client überschrieben – nur via CheckOutSubscription
                 
                 // Avatar-Verarbeitung
                 if (!string.IsNullOrEmpty(profile.AvatarUrl))
@@ -217,6 +208,22 @@ namespace Tribe.Controller.Services
             {
                 _logger.LogError(ex, "Fehler beim Aktualisieren des Profils für User {UserId}", profile.Id);
                 throw;
+            }
+        }
+
+        private async Task EnsureCreatorProfileAsync(string userId, bool shouldExist)
+        {
+            var existingProfile = await _context.CreatorProfiles.FindAsync(userId);
+            if (shouldExist)
+            {
+                if (existingProfile == null)
+                {
+                    _context.CreatorProfiles.Add(new CreatorProfile { Id = userId });
+                }
+            }
+            else if (existingProfile != null)
+            {
+                _context.CreatorProfiles.Remove(existingProfile);
             }
         }
     }

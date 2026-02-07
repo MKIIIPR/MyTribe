@@ -1,34 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using static Tribe.Bib.CommunicationModels.ComModels;
 
 namespace Tribe.Client.Models;
 
-public class LoginRequest
-{
-    [Required]
-    [EmailAddress]
-    public string Email { get; set; } = string.Empty;
-
-    [Required]
-    public string Password { get; set; } = string.Empty;
-}
-
-public class LoginResponse
-{
-    public string Token { get; set; } = string.Empty;
-    public string UserId { get; set; } = string.Empty;
-    public string? ProfileId { get; set; }
-    public string UserName { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-}
-
-public class UserInfo
-{
-    public string Id { get; set; } = string.Empty;
-    public string UserName { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public DateTime LastLoginAt { get; set; }
-    public bool IsActive { get; set; }
-}
+// LoginRequest, LoginResponse und UserInfo sind in Tribe.Bib.CommunicationModels.ComModels definiert.
+// Dieses File enthält nur Client-spezifische Modelle.
 
 public class ApiResponse<T>
 {

@@ -9,7 +9,7 @@ namespace Tribe.Services.ServerServices;
 
 public interface IJwtTokenService
 {
-    string GenerateToken(TribeUser user, string? profileId = null);
+    string GenerateToken(TribeUser user);
     bool ValidateToken(string token);
 }
 
@@ -22,7 +22,7 @@ public class JwtTokenService : IJwtTokenService
         _configuration = configuration;
     }
 
-    public string GenerateToken(TribeUser user, string? profileId = null)
+    public string GenerateToken(TribeUser user)
     {
         var jwtSettings = _configuration.GetSection("JwtSettings");
         var secretKey = jwtSettings["SecretKey"];
@@ -34,16 +34,9 @@ public class JwtTokenService : IJwtTokenService
 
         var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id),
+            new Claim("profileId", user.Id),
             new Claim(ClaimTypes.Name, user.DisplayName!),
-            
         };
-
-        // TribeUser.Id / CreatorProfile.Id hinzufügen
-        if (!string.IsNullOrEmpty(profileId))
-        {
-            claims.Add(new Claim("profileId", profileId));
-        }
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {

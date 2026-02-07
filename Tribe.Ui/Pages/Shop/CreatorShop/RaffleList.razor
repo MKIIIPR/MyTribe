@@ -107,10 +107,10 @@
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
-
-        if (user?.FindFirst(ClaimTypes.NameIdentifier)?.Value is string userId)
+        var id = user?.FindFirst("profileId")?.Value;
+        if (!string.IsNullOrEmpty(id))
         {
-            _creatorId = userId;
+            _creatorId = id;
             await LoadRaffles();
         }
         else

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
@@ -8,7 +9,7 @@ using static Tribe.Bib.ShopRelated.ShopStruckture;
 
 namespace Tribe.Controller.ShopController
 {
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     [ApiController]
     [Route("api/[controller]")]
     public class ProductsController : ControllerBase
@@ -111,7 +112,7 @@ namespace Tribe.Controller.ShopController
 
         private string GetUserId()
         {
-            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+            return User.FindFirstValue("profileId") ?? string.Empty;
         }
 
         // GET: api/Products
@@ -177,19 +178,42 @@ namespace Tribe.Controller.ShopController
         }
 
         // PUT: api/Products/{id}
-        // Aktualisiert ein Produkt. Der Typ wird automatisch erkannt.
+        // Aktualisiert ein Produkt über DTO. Der Typ wird automatisch erkannt.
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProduct(string id, [FromBody] ShopProduct product)
+        public async Task<IActionResult> UpdateProduct(string id, [FromBody] Tribe.DTOs.ProductDto dto)
         {
-            if (product == null)
-                return BadRequest(new { error = "Product is required" });
+            if (dto == null)
+                return BadRequest(new { error = "Product DTO required" });
 
-            if (id != product.Id)
+            if (!string.IsNullOrEmpty(dto.Id) && dto.Id != id)
             {
-                return BadRequest();
+                return BadRequest(new { error = "Product ID mismatch" });
             }
 
-            // Validate
+            var existing = await _productRepository.GetProductByIdAsync(id);
+            if (existing == null)
+            {
+                return NotFound();
+            }
+
+            var product = MapDtoToDomain(dto);
+            if (product == null)
+                return BadRequest(new { error = "Unable to determine product type" });
+
+            product.Id = id;
+            product.CreatorProfileId = existing.CreatorProfileId;
+            product.CreatedAt = existing.CreatedAt;
+            product.ViewCount = existing.ViewCount;
+            product.PurchaseCount = existing.PurchaseCount;
+            product.TotalRevenue = existing.TotalRevenue;
+            product.Status = dto.Status ?? existing.Status;
+            product.Tags = dto.Tags != null && dto.Tags.Count > 0 ? dto.Tags : existing.Tags;
+            product.ImageUrls = dto.ImageUrls != null && dto.ImageUrls.Count > 0 ? dto.ImageUrls : existing.ImageUrls;
+            product.ThumbnailUrl = dto.ThumbnailUrl ?? existing.ThumbnailUrl;
+            product.CategoryId = dto.CategoryId ?? existing.CategoryId;
+            product.SeoTitle = dto.SeoTitle ?? existing.SeoTitle;
+            product.SeoDescription = dto.SeoDescription ?? existing.SeoDescription;
+
             var validationErrors = ProductValidator.ValidateProduct(product);
             if (validationErrors.Count > 0)
                 return BadRequest(new { errors = validationErrors.Select(e => e.ErrorMessage) });
@@ -209,48 +233,6 @@ namespace Tribe.Controller.ShopController
             _logger.LogInformation("Product updated: {ProductId}", id);
             return NoContent();
         }
-        // PUT: api/Products/{id}
-        // Aktualisiert ein Produkt. Der Typ wird automatisch erkannt.
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateProduct(string id, [FromBody] System.Text.Json.JsonElement body)
-        {
-            try
-            {
-                var product = DeserializeToShopProduct(body);
-                if (product == null) return BadRequest(new { error = "Unable to determine product type or invalid payload" });
-
-                if (id != product.Id)
-                {
-                    return BadRequest();
-                }
-
-                // Validate
-                var validationErrors = ProductValidator.ValidateProduct(product);
-                if (validationErrors.Count > 0)
-                    return BadRequest(new { errors = validationErrors.Select(e => e.ErrorMessage) });
-
-                var userId = GetUserId();
-                if (product.CreatorProfileId != userId)
-                {
-                    return Forbid();
-                }
-
-                var result = await _productRepository.UpdateProductAsync(product);
-                if (!result)
-                {
-                    return NotFound();
-                }
-
-                _logger.LogInformation("Product updated: {ProductId}", id);
-                return NoContent();
-            }
-            catch (System.Text.Json.JsonException jex)
-            {
-                _logger.LogError(jex, "JSON deserialization error in UpdateProduct");
-                return BadRequest(new { error = "Invalid JSON payload" });
-            }
-        }
-
         private ShopProduct? DeserializeToShopProduct(System.Text.Json.JsonElement el)
         {
             var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };

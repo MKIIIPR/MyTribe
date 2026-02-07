@@ -7,7 +7,9 @@ namespace Tribe.Services.ClientServices.ShopServices
     public interface IRaffleClientService
     {
         Task<List<Raffle>?> GetCreatorRafflesAsync();
+        Task<List<Raffle>?> GetCreatorRafflesByCreatorIdAsync(string creatorId);
         Task<Raffle?> GetRaffleByIdAsync(string id);
+        Task<Raffle?> GetProductRaffleAsync(string productId);
         Task<string?> CreateRaffleAsync(Raffle raffle);
         Task<bool> UpdateRaffleAsync(string id, Raffle raffle);
         Task<bool> DeleteRaffleAsync(string id);
@@ -36,6 +38,24 @@ namespace Tribe.Services.ClientServices.ShopServices
             catch (Exception ex)
             {
                 _logger?.LogError(ex, "GetCreatorRafflesAsync failed");
+                return null;
+            }
+        }
+
+        public async Task<List<Raffle>?> GetCreatorRafflesByCreatorIdAsync(string creatorId)
+        {
+            if (string.IsNullOrEmpty(creatorId))
+            {
+                return new List<Raffle>();
+            }
+
+            try
+            {
+                return await _api.GetAsync<List<Raffle>>($"{Base}/creator/{creatorId}/public");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "GetCreatorRafflesAsync(creatorId) failed");
                 return null;
             }
         }
@@ -113,6 +133,19 @@ namespace Tribe.Services.ClientServices.ShopServices
             {
                 _logger?.LogError(ex, "BindRaffleToProductAsync failed");
                 return false;
+            }
+        }
+
+        public async Task<Raffle?> GetProductRaffleAsync(string productId)
+        {
+            try
+            {
+                return await _api.GetAsync<Raffle>($"{Base}/product/{productId}");
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "GetProductRaffleAsync failed");
+                return null;
             }
         }
 

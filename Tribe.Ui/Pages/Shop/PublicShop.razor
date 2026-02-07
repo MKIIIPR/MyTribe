@@ -1,106 +1,226 @@
 @page "/shop/{CreatorId}"
+@using System
+@using System.Collections.Generic
+@using System.Linq
 @using MudBlazor
+@using Tribe.Bib.Models.TribeRelated
 @using Tribe.Bib.ShopRelated
 @using Tribe.Services.ClientServices.ShopServices
 @using static Tribe.Bib.ShopRelated.ShopStruckture
 @inject IProductClientService ProductClient
+@inject IRaffleClientService RaffleClient
+@inject ICreatorProfileClientService CreatorProfileClient
 @inject ShopService ShopService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-    <MudPaper Class="pa-6" Elevation="2">
-        @if (_isLoading)
-        {
-            <MudProgressCircular Indeterminate="true" />
-        }
-        else if (_products.Count == 0)
-        {
-            <MudAlert Severity="Severity.Info">Keine Produkte verfügbar</MudAlert>
-        }
-        else
-        {
-            <MudStack Spacing="3">
-                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
-                    <MudText Typo="Typo.h5">Shop für Creator {CreatorId}</MudText>
-                    <MudSpacer />
-                    <MudTextField @bind-Value="_searchTerm" Placeholder="Suche..." />
-                    <MudButton Color="Color.Primary" Variant="Variant.Filled" 
-                              Href="/shop/cart">
-                        Warenkorb ({ShopService.Cart.TotalItems})
-                    </MudButton>
-                </MudStack>
+    @if (_isLoading)
+    {
+        <MudProgressCircular Indeterminate="true" />
+    }
+    else if (_creatorProfile == null)
+    {
+        <MudAlert Severity="Severity.Error">Creator nicht gefunden</MudAlert>
+    }
+    else
+    {
+        <MudPaper Elevation="3" Class="rounded-xl" Style="@HeroStyle">
+            <MudGrid AlignItems="Center">
+                <MudItem xs="12" md="8">
+                    <MudStack Spacing="1">
+                        <MudAvatar Size="Size.Large" Class="mb-2" Image="@(_creatorProfile.AvatarUrl ?? "https://via.placeholder.com/140")" />
+                        <MudText Typo="Typo.h4">@(_creatorProfile.CreatorName ?? _creatorProfile.DisplayName)</MudText>
+                        <MudText Typo="Typo.body1" Class="opacity-80">@(_creatorProfile.Bio ?? "Keine Bio verfÃ¼gbar.")</MudText>
+                        <MudStack Row="true" Spacing="2" Class="mt-3">
+                            <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled">Follower: @_creatorProfile.FollowerCount</MudChip>
+                            <MudChip T="string" Color="Color.Secondary" Variant="Variant.Outlined">Raffles: @_creatorProfile.TotalRaffles</MudChip>
+                            <MudChip T="string" Color="Color.Info" Variant="Variant.Outlined">Tokens: @_creatorProfile.TotalTokensDistributed</MudChip>
+                        </MudStack>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudStack Spacing="1" Class="text-right">
+                        <MudText Typo="Typo.subtitle2" Class="opacity-70">Status</MudText>
+                        <MudChip T="string" Color="@(_creatorProfile.VerifiedCreator ? Color.Success : Color.Default)" Variant="Variant.Filled">
+                            @(_creatorProfile.VerifiedCreator ? "Verifiziert" : "Creator")
+                        </MudChip>
+                        @if (_creatorProfile.AcceptingCollaborations)
+                        {
+                            <MudChip T="string" Color="Color.Success" Variant="Variant.Filled">Kooperationen offen</MudChip>
+                        }
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
 
-                <MudGrid>
-                    @foreach (var product in _filteredProducts)
+        <MudPaper Class="pa-4 mt-4">
+            <MudTabs Rounded="true" Color="Color.Primary">
+                <MudTabPanel Text="Shop">
+                    <MudStack Spacing="3">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudText Typo="Typo.h6">Produkte</MudText>
+                            <MudSpacer />
+                            <MudTextField @bind-Value="_searchTerm" Placeholder="Suche..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" />
+                            <MudButton Color="Color.Primary" Variant="Variant.Filled" Href="/shop/cart">Warenkorb (@ShopService.Cart.TotalItems)</MudButton>
+                        </MudStack>
+
+                        @if (!FilteredProducts.Any())
+                        {
+                            <MudText>Keine Produkte gefunden.</MudText>
+                        }
+                        else
+                        {
+                            <MudGrid>
+                                @foreach (var product in FilteredProducts)
+                                {
+                                    <MudItem xs="12" sm="6" md="4">
+                                        <MudCard>
+                                            <MudCardMedia Image="@(product.ThumbnailUrl ?? "https://via.placeholder.com/320")" Height="200" />
+                                            <MudCardContent>
+                                                <MudText Typo="Typo.h6">@product.Title</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@product.ProductTypeDisplay</MudText>
+                                                <MudText Typo="Typo.body2" Class="mt-2">
+                                                    @if (product.OriginalPrice.HasValue && product.OriginalPrice > product.Price)
+                                                    {
+                                                        <span style="text-decoration: line-through;">â‚¬@product.OriginalPrice.Value.ToString("F2")</span>
+                                                    }
+                                                    <strong> â‚¬@product.Price.ToString("F2")</strong>
+                                                </MudText>
+                                            </MudCardContent>
+                                            <MudCardActions>
+                                                <MudButton Size="Size.Small" OnClick="@(() => ViewProduct(product.Id))">Details</MudButton>
+                                                <MudButton Size="Size.Small" Color="Color.Primary" OnClick="@(() => AddToCart(product))">In den Warenkorb</MudButton>
+                                            </MudCardActions>
+                                        </MudCard>
+                                    </MudItem>
+                                }
+                            </MudGrid>
+                        }
+                    </MudStack>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Raffle">
+                    @if (_raffles.Count == 0)
                     {
-                        <MudItem xs="12" sm="6" md="4" lg="3">
-                            <MudCard>
-                                <MudCardMedia Image="@(product.ThumbnailUrl ?? "https://via.placeholder.com/300")" Height="200" />
-                                <MudCardContent>
-                                    <MudText Typo="Typo.h6">@product.Title</MudText>
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                        @product.ProductTypeDisplay
-                                    </MudText>
-                                    <MudText Typo="Typo.body2" Class="mt-2">
-                                        @if (product.OriginalPrice.HasValue && product.OriginalPrice > product.Price)
-                                        {
-                                            <span style="text-decoration: line-through;">€@product.OriginalPrice.Value.ToString("F2")</span>
-                                        }
-                                        <strong>€@product.Price.ToString("F2")</strong>
-                                    </MudText>
-                                    <MudRating ReadOnly="true" Value="GetAverageRating(product.Id)" />
-                                </MudCardContent>
-                                <MudCardActions>
-                                    <MudButton Size="Size.Small" OnClick="@(async () => await ViewProduct(product.Id))">
-                                        Details
-                                    </MudButton>
-                                    <MudButton Size="Size.Small" Color="Color.Primary" 
-                                              OnClick="@(async () => await AddToCart(product))">
-                                        In den Warenkorb
-                                    </MudButton>
-                                </MudCardActions>
-                            </MudCard>
-                        </MudItem>
+                        <MudText>Der Creator veranstaltet aktuell keine Raffles.</MudText>
                     }
-                </MudGrid>
-            </MudStack>
-        }
-    </MudPaper>
+                    else
+                    {
+                        <MudGrid>
+                            @foreach (var raffle in _raffles)
+                            {
+                                <MudItem xs="12" md="6">
+                                    <MudCard>
+                                        <MudCardContent>
+                                            <MudStack Spacing="1">
+                                                <MudText Typo="Typo.h6">@raffle.Title</MudText>
+                                                <MudText Typo="Typo.body2">@raffle.PrizeDescription</MudText>
+                                                <MudText Typo="Typo.caption">Zeitraum: @FormatDateRange(raffle.StartDate, raffle.EndDate)</MudText>
+                                                <MudText Typo="Typo.caption">EintrÃ¤ge: @raffle.CurrentEntries / @raffle.MaxEntries</MudText>
+                                                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(raffle.Status)">@raffle.Status</MudChip>
+                                            </MudStack>
+                                        </MudCardContent>
+                                    </MudCard>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    }
+                </MudTabPanel>
+
+                <MudTabPanel Text="Support">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle2">Ãœber den Creator</MudText>
+                        <MudText Typo="Typo.body1">@(_creatorProfile.Bio ?? "Keine weiteren Informationen vorhanden.")</MudText>
+                        <MudDivider />
+                        <MudText Typo="Typo.subtitle2">Social</MudText>
+                        <MudStack Row="true" Spacing="1">
+                            @foreach (var link in SocialLinks)
+                            {
+                                if (!string.IsNullOrEmpty(link.Url))
+                                {
+                                    <MudButton Variant="Variant.Outlined" StartIcon="@link.Icon" Size="Size.Small" Target="_blank" Href="@link.Url">@link.Label</MudButton>
+                                }
+                            }
+                        </MudStack>
+                        @if (_creatorProfile.AcceptingCollaborations && !string.IsNullOrEmpty(_creatorProfile.CollaborationInfo))
+                        {
+                            <MudText Typo="Typo.body2" Class="mt-2">Kooperationen: @_creatorProfile.CollaborationInfo</MudText>
+                        }
+                    </MudStack>
+                </MudTabPanel>
+            </MudTabs>
+        </MudPaper>
+    }
 </MudContainer>
 
-@code{
+@code {
     [Parameter] public string? CreatorId { get; set; }
+
+    private CreatorProfile? _creatorProfile;
     private List<ShopProduct> _products = new();
-    private List<ProductReview> _reviews = new();
-    private string _searchTerm = "";
+    private List<Raffle> _raffles = new();
+    private string _searchTerm = string.Empty;
     private bool _isLoading = true;
 
-    private List<ShopProduct> _filteredProducts => 
-        string.IsNullOrWhiteSpace(_searchTerm) 
-            ? _products 
-            : ShopService.SearchProducts(_searchTerm);
+    private IEnumerable<ShopProduct> FilteredProducts =>
+        string.IsNullOrWhiteSpace(_searchTerm)
+            ? _products
+            : _products.Where(p => (p.Title?.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ?? false)
+                || (p.Description?.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
 
-    protected override async Task OnInitializedAsync()
+    private string HeroStyle
     {
-        if (!string.IsNullOrEmpty(CreatorId))
+        get
         {
-            await LoadProducts();
+            var banner = _creatorProfile?.BannerUrl ?? "https://via.placeholder.com/1200x400";
+            return $"background-image: linear-gradient(rgba(15,15,15,0.85), rgba(15,15,15,0.9)), url('{banner}'); background-size: cover; background-position: center; color: white;";
         }
     }
 
-    private async Task LoadProducts()
+    private IEnumerable<(string Label, string Url, string Icon)> SocialLinks => new[]
     {
+        ("Patreon", _creatorProfile?.PatreonUrl, Icons.Material.Filled.Favorite),
+        ("YouTube", _creatorProfile?.YouTubeUrl, Icons.Material.Filled.PlayArrow),
+        ("Twitch", _creatorProfile?.TwitchUrl, Icons.Material.Filled.VideogameAsset),
+        ("Twitter", _creatorProfile?.TwitterUrl, Icons.Material.Filled.AlternateEmail),
+        ("Instagram", _creatorProfile?.InstagramUrl, Icons.Material.Filled.CameraAlt),
+        ("TikTok", _creatorProfile?.TikTokUrl, Icons.Material.Filled.MusicNote),
+        ("Discord", _creatorProfile?.DiscordUrl, Icons.Material.Filled.Chat)
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadCreatorPageAsync();
+    }
+
+    private async Task LoadCreatorPageAsync()
+    {
+        if (string.IsNullOrEmpty(CreatorId))
+        {
+            _creatorProfile = null;
+            _products.Clear();
+            _raffles.Clear();
+            _isLoading = false;
+            return;
+        }
+
+        _isLoading = true;
         try
         {
-            _isLoading = true;
-            // Note: need API endpoint to get products by creator
-            _products = await ProductClient.GetMyProductsAsync();
-            _products = _products.Where(p => p.CreatorProfileId == CreatorId).ToList();
+            var profileTask = CreatorProfileClient.GetCreatorProfileAsync(CreatorId);
+            var productsTask = ProductClient.GetCreatorProductsAsync(CreatorId);
+            var rafflesTask = RaffleClient.GetCreatorRafflesByCreatorIdAsync(CreatorId);
+
+            await Task.WhenAll(profileTask, productsTask, rafflesTask);
+
+            _creatorProfile = profileTask.Result;
+            _products = productsTask.Result ?? new();
+            _raffles = rafflesTask.Result ?? new();
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Fehler beim Laden der Creator-Seite: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -108,20 +228,30 @@
         }
     }
 
-    private async Task AddToCart(ShopProduct product)
+    private void AddToCart(ShopProduct product)
     {
         ShopService.AddToCart(product, 1);
-        Snackbar.Add($"{product.Title} zum Warenkorb hinzugefügt", Severity.Success);
+        Snackbar.Add($"{product.Title} zum Warenkorb hinzugefÃ¼gt", Severity.Success);
     }
 
-    private async Task ViewProduct(string id)
+    private void ViewProduct(string id) => Navigation.NavigateTo($"/shop/product/{id}");
+
+    private string FormatDateRange(DateTime? start, DateTime? end)
     {
-        Navigation.NavigateTo($"/shop/product/{id}");
+        var startText = start?.ToLocalTime().ToString("dd.MM.yyyy") ?? "â€“";
+        var endText = end?.ToLocalTime().ToString("dd.MM.yyyy") ?? "offen";
+        return $"{startText} â€“ {endText}";
     }
 
-    private int GetAverageRating(string productId)
+    private Color GetStatusColor(string status)
     {
-        // TODO: Load reviews and calculate average
-        return 4;
+        return status?.ToLowerInvariant() switch
+        {
+            "active" => Color.Success,
+            "ended" => Color.Warning,
+            "drawn" => Color.Info,
+            "cancelled" => Color.Error,
+            _ => Color.Default
+        };
     }
 }

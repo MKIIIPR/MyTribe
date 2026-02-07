@@ -10,9 +10,10 @@ namespace Tribe.Services.ClientServices.ShopServices
         void SetAuthToken(string token);
         void RemoveAuthToken();
         Task<List<ShopProduct>> GetMyProductsAsync();
+        Task<List<ShopProduct>> GetCreatorProductsAsync(string creatorId);
         Task<ShopProduct?> GetProductByIdAsync(string productId);
         Task<ShopProduct?> CreateProductAsync<T>(T product) where T : ShopProduct;
-        Task<bool> UpdateProductAsync<T>(T product) where T : ShopProduct;
+        Task<bool> UpdateProductAsync(string productId, ProductDto dto);
         Task<bool> DeleteProductAsync(string productId);
     }
 
@@ -128,9 +129,26 @@ namespace Tribe.Services.ClientServices.ShopServices
             return await _apiService.PostAsync<T, ShopProduct>(ProductsEndpoint, product);
         }
 
-        public async Task<bool> UpdateProductAsync<T>(T product) where T : ShopProduct
+        public async Task<bool> UpdateProductAsync(string productId, ProductDto dto)
         {
-            return await _apiService.PutAsync($"{ProductsEndpoint}/{product.Id}", product);
+            if (string.IsNullOrEmpty(productId))
+            {
+                _logger.LogWarning("UpdateProductAsync called without productId");
+                return false;
+            }
+
+            return await _apiService.PutAsync($"{ProductsEndpoint}/{productId}", dto);
+        }
+
+        public async Task<List<ShopProduct>> GetCreatorProductsAsync(string creatorId)
+        {
+            if (string.IsNullOrEmpty(creatorId))
+            {
+                return new List<ShopProduct>();
+            }
+
+            var result = await _apiService.GetAsync<List<ShopProduct>>($"{ProductsEndpoint}/creator/{creatorId}");
+            return result ?? new List<ShopProduct>();
         }
 
         public async Task<bool> DeleteProductAsync(string productId)

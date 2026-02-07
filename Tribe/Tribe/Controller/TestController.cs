@@ -1,11 +1,13 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Tribe.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class TestController : ControllerBase
 {
     [HttpGet("public")]
@@ -24,7 +26,7 @@ public class TestController : ControllerBase
         {
             message = $"Hello {userName}, this is protected data!",
             timestamp = DateTime.UtcNow,
-            userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+            userId = User.FindFirst("profileId")?.Value
         });
     }
 

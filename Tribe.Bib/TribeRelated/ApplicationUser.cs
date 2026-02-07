@@ -76,6 +76,7 @@
 
         // Navigation Properties
         public CreatorSubscription? ActiveCreatorSubscription { get; set; }
+        public CreatorProfile? CreatorProfile { get; set; }
     }
 
     // 2. CreatorPlan - Die verfügbaren Pläne
@@ -172,13 +173,28 @@
     }
 
     // 5. CreatorProfile - Erweiterte Creator-Daten
-    public class CreatorProfile : TribeUser
+    public class CreatorProfile
     {
-        public CreatorProfile()
-        {
-            ProfileType = Constants.ProfileTypes.Creator;
-            IsCreator = true;
-        }
+        [Key]
+        [ForeignKey(nameof(TribeUser))]
+        public string Id { get; set; } = string.Empty;
+
+        public TribeUser TribeUser { get; set; } = null!;
+
+        [NotMapped]
+        public string? DisplayName => TribeUser?.DisplayName;
+
+        [NotMapped]
+        public string? AvatarUrl => TribeUser?.AvatarUrl;
+
+        [NotMapped]
+        public string? Bio => TribeUser?.Bio;
+
+        [NotMapped]
+        public string ProfileType => TribeUser?.ProfileType ?? Constants.ProfileTypes.Regular;
+
+        [NotMapped]
+        public bool IsCreator => TribeUser?.IsCreator ?? false;
 
         // === ÖFFENTLICHE CREATOR INFO ===
         [MaxLength(100)]
@@ -316,7 +332,7 @@
         public DateTime? DrawnAt { get; set; }
 
         // === CREATOR CONNECTION (nur ID, keine Navigation für API-Kommunikation) ===
-        [Required]
+        // [Required] entfernt — wird serverseitig aus JWT gesetzt, nicht vom Client gesendet
         public string CreatorProfileId { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

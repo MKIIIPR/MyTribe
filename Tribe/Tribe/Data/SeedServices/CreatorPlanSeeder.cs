@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Tribe.Bib.Models.TribeRelated;
 
 public static class CreatorPlanSeeder
 {

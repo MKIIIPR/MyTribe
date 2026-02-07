@@ -20,7 +20,7 @@ namespace Tribe.Controller.ShopController
             _logger = logger;
         }
 
-        private string? GetUserId() => User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        private string? GetUserId() => User?.FindFirstValue("profileId");
 
         [HttpGet("product/{productId}")]
         public async Task<IActionResult> GetReviewsForProduct(string productId)

@@ -1,9 +1,11 @@
 ﻿// ===== AUTH CONTROLLER - VEREINHEITLICHT =====
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Security.Claims;
 using Tribe.Bib.Models.TribeRelated;
 using Tribe.Data;
 using Tribe.Services.ServerServices;
@@ -69,18 +71,15 @@ namespace Tribe.Controller
                 // 3. Suche passenden TribeUser anhand ApplicationUserId
                 var tribeUser = await _context.TribeUsers
                     .FirstOrDefaultAsync(t => t.ApplicationUserId == user.Id);
-                string token = string.Empty;
-                // 4. Token mit profileId generieren
-                if (tribeUser != null)
+
+                if (tribeUser == null)
                 {
-                    token = _jwtTokenService.GenerateToken(tribeUser);
-                }
-                else
-                {
-                    _logger.LogDebug("TRIBE_USER_NOT_FOUND: ApplicationUserId={ApplicationUserId}",
-                        user.Id);
+                    _logger.LogWarning("LOGIN_FAILED: Email={Email}, Reason=TribeUserNotFound", request.Email);
+                    return BadRequest(new { message = "No profile found for this account" });
                 }
 
+                // 4. Token mit TribeUser generieren
+                var token = _jwtTokenService.GenerateToken(tribeUser);
 
                 // Update last login
                 user.LastLoginAt = DateTime.UtcNow;
@@ -90,18 +89,18 @@ namespace Tribe.Controller
                 SetAuthCookie(token);
 
                 // SignalR notification
-                await _authNotificationService.NotifyUserLoggedInAsync(tribeUser.Id,tribeUser.DisplayName);
+                await _authNotificationService.NotifyUserLoggedInAsync(tribeUser.Id, tribeUser.DisplayName!);
 
                 _logger.LogInformation("LOGIN_SUCCESS: Email={Email}, ProfileId={ProfileId}, IP={ClientIp}",
-                    request.Email, tribeUser?.Id, clientIp);
+                    request.Email, tribeUser.Id, clientIp);
 
                 return Ok(new LoginResponse
                 {
                     Token = token,
                     UserId = tribeUser.Id,
-                    ProfileId = tribeUser?.Id,
-                    UserName = tribeUser.DisplayName
-                    
+                    ProfileId = tribeUser.Id,
+                    UserName = tribeUser.DisplayName!,
+                    Email = user.Email!
                 });
             }
             catch (Exception ex)
@@ -112,11 +111,11 @@ namespace Tribe.Controller
         }
 
         [HttpPost("logout")]
-        [Authorize]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> Logout()
         {
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            var userName = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+            var userId = User.FindFirst("profileId")?.Value;
+            var userName = User.FindFirst(ClaimTypes.Name)?.Value;
             var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
 
             _logger.LogInformation("LOGOUT_ATTEMPT: UserId={UserId}, UserName={UserName}, IP={ClientIp}",
@@ -149,10 +148,10 @@ namespace Tribe.Controller
         }
 
         [HttpGet("user")]
-        [Authorize]
+        [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
         public async Task<IActionResult> GetCurrentUser()
         {
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userId = User.FindFirst("profileId")?.Value;
 
             _logger.LogDebug("USER_INFO_REQUEST: UserId={UserId}", userId);
 

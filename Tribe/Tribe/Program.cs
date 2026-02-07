@@ -68,8 +68,10 @@ builder.Services.AddScoped<IProductClientService, Tribe.Services.ClientServices.
 builder.Services.AddScoped<ICategoryClientService, Tribe.Services.ClientServices.ShopServices.CategoryClientService>();
 builder.Services.AddScoped<IOrderClientService, Tribe.Services.ClientServices.ShopServices.OrderClientService>();
 builder.Services.AddScoped<Tribe.Services.ClientServices.ShopServices.IRaffleClientService, Tribe.Services.ClientServices.ShopServices.RaffleClientService>();
+builder.Services.AddScoped<ICreatorProfileClientService, Tribe.Services.ClientServices.ShopServices.CreatorProfileClientService>();
 // Unified shop creator facade for server-side components
 builder.Services.AddScoped<IShopCreatorService, Tribe.Services.ClientServices.ShopServices.ShopCreatorService>();
+builder.Services.AddSingleton<Tribe.Services.ClientServices.ShopServices.ShopService>();
 #endregion
 
 #region Server Services
@@ -104,7 +106,7 @@ builder.Services.AddScoped<IdentityRedirectManager>();
 
 #region Authentication & Authorization
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["SecretKey"] ?? "YourDefaultSecretKeyThatIsAtLeast32CharactersLongForSecurity!";
+var secretKey = jwtSettings["SecretKey"] ?? throw new InvalidOperationException("JwtSettings:SecretKey is not configured.");
 
 builder.Services.AddAuthentication(options =>
 {
@@ -113,8 +115,8 @@ builder.Services.AddAuthentication(options =>
 })
     .AddIdentityCookies();
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+builder.Services.AddAuthentication()
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -127,7 +129,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey))
         };
 
-        // SignalR JWT Token aus Query-String lesen
+        // SignalR JWT Token aus Query-String oder Cookie lesen
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
@@ -138,6 +140,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 {
                     context.Token = accessToken;
                 }
+
+                // JWT aus Cookie lesen falls kein Authorization-Header vorhanden
+                if (string.IsNullOrEmpty(context.Token))
+                {
+                    context.Token = context.Request.Cookies["jwt_token"];
+                }
+
                 return Task.CompletedTask;
             }
         };

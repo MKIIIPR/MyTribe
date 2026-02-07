@@ -28,7 +28,6 @@
   <ItemGroup>
     <Folder Include="Data\Migrations\" />
     <Folder Include="Hub\" />
-    <Folder Include="Migrations\ApplicationDb\" />
     <Folder Include="Service\" />
   </ItemGroup>
 

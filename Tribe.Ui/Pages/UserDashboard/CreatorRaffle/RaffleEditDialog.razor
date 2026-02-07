@@ -1,7 +1,8 @@
 @namespace Tribe.Ui.Pages.UserDashboard.CreatorRaffle
 @using MudBlazor
 @using Tribe.Bib.Models.TribeRelated
-@inject HttpClient Http
+@using Tribe.Services.ClientServices.ShopServices
+@inject IRaffleClientService RaffleService
 @inject ISnackbar Snackbar
 
 <MudDialog>
@@ -129,7 +130,6 @@
 
     private async Task Save()
     {
-        // Validate form and rely on bound _isFormValid
         _form?.Validate();
         if (!_isFormValid)
             return;
@@ -137,26 +137,31 @@
         try
         {
             var isNew = string.IsNullOrEmpty(Raffle.Id);
-            var endpoint = isNew ? "api/shop/raffles/create" : $"api/shop/raffles/{Raffle.Id}";
-            var method = isNew ? HttpMethod.Post : HttpMethod.Put;
 
-            var request = new HttpRequestMessage(method, endpoint)
+            if (isNew)
             {
-                Content = new StringContent(
-                    System.Text.Json.JsonSerializer.Serialize(Raffle),
-                    System.Text.Encoding.UTF8,
-                    "application/json")
-            };
-
-            var response = await Http.SendAsync(request);
-            if (response.IsSuccessStatusCode)
-            {
-                MudDialog.Close(DialogResult.Ok(Raffle));
+                var createdId = await RaffleService.CreateRaffleAsync(Raffle);
+                if (!string.IsNullOrEmpty(createdId))
+                {
+                    Raffle.Id = createdId;
+                    MudDialog.Close(DialogResult.Ok(Raffle));
+                }
+                else
+                {
+                    Snackbar.Add("Fehler beim Erstellen der Raffle", Severity.Error);
+                }
             }
             else
             {
-                var error = await response.Content.ReadAsStringAsync();
-                Snackbar.Add($"Fehler beim Speichern: {error}", Severity.Error);
+                var success = await RaffleService.UpdateRaffleAsync(Raffle.Id, Raffle);
+                if (success)
+                {
+                    MudDialog.Close(DialogResult.Ok(Raffle));
+                }
+                else
+                {
+                    Snackbar.Add("Fehler beim Aktualisieren der Raffle", Severity.Error);
+                }
             }
         }
         catch (Exception ex)

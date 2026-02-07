@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
@@ -11,7 +12,7 @@ namespace Tribe.API.Controller
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class GenericApiController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -25,7 +26,7 @@ namespace Tribe.API.Controller
 
         private string GetCurrentUserId()
         {
-            return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+            return User.FindFirstValue("profileId") ?? string.Empty;
         }
 
         private DbSet<T> GetDbSet<T>() where T : class
@@ -139,10 +140,10 @@ namespace Tribe.API.Controller
             if (typeof(T) == typeof(CreatorProfile))
             {
                 query = query
+                    .Include("TribeUser")
                     .Include("CreatorTokens")
-                    .Include("Partner")
-                    .Include("Placements")
-                    .Include("Raffles");
+                    .Include("AffiliatePartners")
+                    .Include("Placements");
             }
 
             var entity = await query.FirstOrDefaultAsync(e => EF.Property<string>(e, "Id") == id);
@@ -186,10 +187,10 @@ namespace Tribe.API.Controller
             if (typeof(T) == typeof(CreatorProfile))
             {
                 query = query
+                    .Include("TribeUser")
                     .Include("CreatorTokens")
-                    .Include("Partner")
-                    .Include("Placements")
-                    .Include("Raffles");
+                    .Include("AffiliatePartners")
+                    .Include("Placements");
             }
 
             var entities = await query.ToListAsync();
@@ -268,19 +269,17 @@ namespace Tribe.API.Controller
 
             // Set ID für neue Entität
             var idProperty = typeof(T).GetProperty("Id");
-            if (idProperty != null)
-                idProperty.SetValue(entity, Guid.NewGuid().ToString());
 
-            // Set UserId für CreatorProfile
+            // Für CreatorProfile: Id = UserId (gleiche ID wie TribeUser)
             if (typeof(T) == typeof(CreatorProfile))
             {
-                var userIdProperty = typeof(T).GetProperty("UserId");
-                if (userIdProperty != null)
-                    userIdProperty.SetValue(entity, userId);
-
-                var createdAtProperty = typeof(T).GetProperty("CreatedAt");
-                if (createdAtProperty != null)
-                    createdAtProperty.SetValue(entity, DateTime.UtcNow);
+                if (idProperty != null)
+                    idProperty.SetValue(entity, userId);
+            }
+            else
+            {
+                if (idProperty != null)
+                    idProperty.SetValue(entity, Guid.NewGuid().ToString());
             }
 
             // Validate ownership für Unterklassen
@@ -435,6 +434,7 @@ namespace Tribe.API.Controller
                     return Unauthorized();
 
                 var profile = await _context.CreatorProfiles
+                    .Include(p => p.TribeUser)
                     .Include(p => p.CreatorTokens)
                     .Include(p => p.AffiliatePartners)
                     .Include(p => p.Placements)

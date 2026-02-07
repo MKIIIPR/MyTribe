@@ -1,66 +1,31 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using Tribe.Controller.Services;
-using Tribe.Data;
 using Tribe.Bib.Models.TribeRelated;
+
 using static Tribe.Bib.ShopRelated.ShopStruckture;
+using static Tribe.Bib.Models.TribeRelated.Constants;
 
 namespace Tribe.Controller.ShopController
 {
     [ApiController]
     [Route("api/shop/raffles")]
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class RaffleController : ControllerBase
     {
-        private readonly ApplicationDbContext _context;
         private readonly IRaffleService _raffleService;
         private readonly ILogger<RaffleController> _logger;
 
-        public RaffleController(ApplicationDbContext context, IRaffleService raffleService, ILogger<RaffleController> logger)
+        public RaffleController(IRaffleService raffleService, ILogger<RaffleController> logger)
         {
-            _context = context;
             _raffleService = raffleService;
             _logger = logger;
         }
 
-        // Gibt die ApplicationUser.Id zurück (aus AspNetUsers)
-        private string GetApplicationUserId()
-        {
-            // Debug: Alle Claims loggen
-            _logger.LogInformation("=== DEBUG: User Claims ===");
-            _logger.LogInformation("User.Identity.IsAuthenticated: {IsAuth}", User.Identity?.IsAuthenticated);
-            _logger.LogInformation("User.Identity.AuthenticationType: {AuthType}", User.Identity?.AuthenticationType);
-
-            foreach (var claim in User.Claims)
-            {
-                _logger.LogInformation("Claim: {Type} = {Value}", claim.Type, claim.Value);
-            }
-            _logger.LogInformation("=== END DEBUG ===");
-
-            // Versuche verschiedene Claim-Namen
-            var userId = User.FindFirstValue("nameid")
-                         ?? User.FindFirstValue(ClaimTypes.NameIdentifier)
-                         ?? User.FindFirstValue("sub")
-                         ?? User.FindFirstValue("id")
-                         ?? string.Empty;
-
-            _logger.LogInformation("Resolved UserId: {UserId}", userId);
-            return userId;
-        }
-
-        // Ermittelt die CreatorProfile.Id (TribeUser.Id) anhand der ApplicationUserId
-        private async Task<string?> GetCreatorProfileIdAsync()
-        {
-            var appUserId = GetApplicationUserId();
-            if (string.IsNullOrEmpty(appUserId)) return null;
-
-            var creatorProfile = await _context.TribeUsers
-                .FirstOrDefaultAsync(p => p.Id == appUserId);
-
-            return creatorProfile?.Id;
-        }
+        // Liest die profileId direkt aus dem JWT-Claim (keine DB-Abfrage nötig)
+        private string? GetProfileId() => User.FindFirstValue("profileId");
 
         /// <summary>
         /// Create a new raffle (Creator only)
@@ -73,12 +38,12 @@ namespace Tribe.Controller.ShopController
                 if (raffle == null)
                     return BadRequest(new { error = "Raffle data required" });
 
-                // Ermittle die CreatorProfile.Id (nicht ApplicationUser.Id!)
-                var creatorProfileId = await GetCreatorProfileIdAsync();
-                if (string.IsNullOrEmpty(creatorProfileId))
+                var profileId = GetProfileId();
+                if (string.IsNullOrEmpty(profileId))
                     return BadRequest(new { error = "No creator profile found for current user" });
 
-                raffle.CreatorProfileId = creatorProfileId;
+                // CreatorProfileId wird serverseitig aus JWT gesetzt
+                raffle.CreatorProfileId = profileId;
 
                 // Defaults setzen falls nicht vorhanden
                 if (string.IsNullOrEmpty(raffle.RaffleType))
@@ -88,7 +53,7 @@ namespace Tribe.Controller.ShopController
                     raffle.StartDate = DateTime.UtcNow;
 
                 var raffleId = await _raffleService.CreateRaffleAsync(raffle);
-                _logger.LogInformation("Raffle created: {RaffleId} by CreatorProfile {CreatorProfileId}", raffleId, creatorProfileId);
+                _logger.LogInformation("Raffle created: {RaffleId} by Profile {ProfileId}", raffleId, profileId);
 
                 return CreatedAtAction(nameof(GetRaffle), new { id = raffleId }, new { raffleId = raffleId, message = "Raffle created successfully" });
             }
@@ -119,12 +84,24 @@ namespace Tribe.Controller.ShopController
         [HttpGet("creator/all")]
         public async Task<IActionResult> GetCreatorRaffles()
         {
-            var creatorProfileId = await GetCreatorProfileIdAsync();
-            if (string.IsNullOrEmpty(creatorProfileId))
-                return Ok(new List<Raffle>()); // Kein Creator-Profil -> leere Liste
+            var profileId = GetProfileId();
+            if (string.IsNullOrEmpty(profileId))
+                return Unauthorized(new { error = "ProfileId not found in token" });
 
-            var raffles = await _raffleService.GetCreatorRafflesAsync(creatorProfileId);
+            var raffles = await _raffleService.GetCreatorRafflesAsync(profileId);
             return Ok(raffles);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("creator/{creatorId}/public")]
+        public async Task<IActionResult> GetPublicRaffles(string creatorId)
+        {
+            if (string.IsNullOrEmpty(creatorId))
+                return BadRequest(new { error = "CreatorId is required" });
+
+            var raffles = await _raffleService.GetCreatorRafflesAsync(creatorId);
+            var active = raffles?.Where(r => r.Status == RaffleStatus.Active).ToList() ?? new List<Raffle>();
+            return Ok(active);
         }
         /// <summary>
         /// Check whether a raffle with given id exists and belongs to current user
@@ -136,8 +113,7 @@ namespace Tribe.Controller.ShopController
             var raffle = await _raffleService.GetRaffleByIdAsync(id);
             if (raffle == null) return Ok(false);
 
-            var creatorProfileId = await GetCreatorProfileIdAsync();
-            return Ok(raffle.CreatorProfileId == creatorProfileId);
+            return Ok(raffle.CreatorProfileId == GetProfileId());
         }
 
         /// <summary>
@@ -150,12 +126,12 @@ namespace Tribe.Controller.ShopController
             if (existingRaffle == null)
                 return NotFound();
 
-            var creatorProfileId = await GetCreatorProfileIdAsync();
-            if (existingRaffle.CreatorProfileId != creatorProfileId)
+            var profileId = GetProfileId();
+            if (existingRaffle.CreatorProfileId != profileId)
                 return Forbid();
 
             raffle.Id = id;
-            raffle.CreatorProfileId = creatorProfileId!;
+            raffle.CreatorProfileId = profileId!;
             var success = await _raffleService.UpdateRaffleAsync(raffle);
 
             if (!success)
@@ -175,8 +151,8 @@ namespace Tribe.Controller.ShopController
             if (raffle == null)
                 return NotFound();
 
-            var creatorProfileId = await GetCreatorProfileIdAsync();
-            if (raffle.CreatorProfileId != creatorProfileId)
+            var profileId = GetProfileId();
+            if (raffle.CreatorProfileId != profileId)
                 return Forbid();
 
             var success = await _raffleService.DeleteRaffleAsync(id);
@@ -198,8 +174,8 @@ namespace Tribe.Controller.ShopController
             if (raffle == null)
                 return NotFound(new { error = "Raffle not found" });
 
-            var creatorProfileId = await GetCreatorProfileIdAsync();
-            if (raffle.CreatorProfileId != creatorProfileId)
+            var profileId = GetProfileId();
+            if (raffle.CreatorProfileId != profileId)
                 return Forbid();
 
             var success = await _raffleService.BindRaffleToProductAsync(productId, raffleId);
@@ -247,13 +223,13 @@ namespace Tribe.Controller.ShopController
             if (request == null || request.Quantity <= 0)
                 return BadRequest(new { error = "Invalid quantity" });
 
-            var creatorProfileId = await GetCreatorProfileIdAsync();
-            var success = await _raffleService.AddRaffleEntryAsync(raffleId, creatorProfileId, request.Quantity);
+            var profileId = GetProfileId();
+            var success = await _raffleService.AddRaffleEntryAsync(raffleId, profileId, request.Quantity);
 
             if (!success)
                 return BadRequest(new { error = "Failed to add raffle entry" });
 
-            _logger.LogInformation("Raffle entry added: {RaffleId} x {Quantity} for User {UserId}", raffleId, request.Quantity, creatorProfileId);
+            _logger.LogInformation("Raffle entry added: {RaffleId} x {Quantity} for Profile {ProfileId}", raffleId, request.Quantity, profileId);
             return Ok(new { message = $"Added {request.Quantity} entry(ies) to raffle" });
         }
 

@@ -2,6 +2,7 @@ using Tribe.Client.Services;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Tribe.Bib.ShopRelated;
+using Tribe.Bib.Models.TribeRelated;
 using static Tribe.Bib.ShopRelated.ShopStruckture;
 
 namespace Tribe.Services.ClientServices.ShopServices
@@ -28,23 +29,24 @@ namespace Tribe.Services.ClientServices.ShopServices
         Task<bool> UpdateOrderStatusAsync(string id, string newStatus);
 
         // Raffles
-        Task<List<dynamic>?> GetMyRafflesAsync();
-        Task<dynamic?> CreateRaffleAsync(object raffle);
-        Task<bool> UpdateRaffleAsync(string id, object raffle);
+        Task<List<Raffle>?> GetMyRafflesAsync();
+        Task<Raffle?> CreateRaffleAsync(Raffle raffle);
+        Task<bool> UpdateRaffleAsync(string id, Raffle raffle);
         Task<bool> DeleteRaffleAsync(string id);
     }
 
     public class ShopCreatorService : IShopCreatorService
     {
         private readonly IApiService _api;
+        private readonly IRaffleClientService _raffleService;
         private const string ProductsEndpoint = "api/Products";
         private const string CategoriesEndpoint = "api/shop/categories";
         private const string OrdersEndpoint = "api/shop/orders";
-        private const string RafflesEndpoint = "api/shop/raffles";
 
-        public ShopCreatorService(IApiService api)
+        public ShopCreatorService(IApiService api, IRaffleClientService raffleService)
         {
             _api = api;
+            _raffleService = raffleService;
         }
 
         // Products
@@ -88,10 +90,16 @@ namespace Tribe.Services.ClientServices.ShopServices
 
         public Task<bool> UpdateOrderStatusAsync(string id, string newStatus) => _api.PutAsync($"{OrdersEndpoint}/{id}/status", newStatus);
 
-        // Raffles (dynamic because model may live elsewhere)
-        public Task<List<dynamic>?> GetMyRafflesAsync() => _api.GetAsync<List<dynamic>>($"{RafflesEndpoint}/creator/all");
-        public Task<dynamic?> CreateRaffleAsync(object raffle) => _api.PostAsync<object, dynamic>($"{RafflesEndpoint}/create", raffle);
-        public Task<bool> UpdateRaffleAsync(string id, object raffle) => _api.PutAsync($"{RafflesEndpoint}/{id}", raffle);
-        public Task<bool> DeleteRaffleAsync(string id) => _api.DeleteAsync($"{RafflesEndpoint}/{id}");
+        // Raffles — delegiert an IRaffleClientService
+        public Task<List<Raffle>?> GetMyRafflesAsync() => _raffleService.GetCreatorRafflesAsync();
+        public async Task<Raffle?> CreateRaffleAsync(Raffle raffle)
+        {
+            var id = await _raffleService.CreateRaffleAsync(raffle);
+            if (id == null) return null;
+            raffle.Id = id;
+            return raffle;
+        }
+        public Task<bool> UpdateRaffleAsync(string id, Raffle raffle) => _raffleService.UpdateRaffleAsync(id, raffle);
+        public Task<bool> DeleteRaffleAsync(string id) => _raffleService.DeleteRaffleAsync(id);
     }
 }

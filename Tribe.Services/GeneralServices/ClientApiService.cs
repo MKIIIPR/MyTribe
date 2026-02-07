@@ -21,11 +21,11 @@ namespace Tribe.Client.Services
         private readonly ILogger<ClientApiService>? _logger;
         private readonly HttpClient _httpClient;
 
-        public ClientApiService(IApiService apiService, ILogger<ClientApiService>? logger = null, HttpClient? httpClient = null)
+        public ClientApiService(IApiService apiService, HttpClient httpClient, ILogger<ClientApiService>? logger = null)
         {
             _apiService = apiService;
             _logger = logger;
-            _httpClient = httpClient ?? GetHttpClientFromApiService();
+            _httpClient = httpClient;
         }
 
         public async Task<T?> GetByIdAsync<T>(string id)
@@ -202,16 +202,5 @@ namespace Tribe.Client.Services
             }
         }
 
-        private HttpClient GetHttpClientFromApiService()
-        {
-            var field = _apiService.GetType().GetField("_httpClient",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (field == null)
-            {
-                _logger?.LogWarning("HttpClient field not found in IApiService");
-                throw new InvalidOperationException("HttpClient field not found in IApiService");
-            }
-            return (HttpClient)field.GetValue(_apiService)!;
         }
-    }
 }

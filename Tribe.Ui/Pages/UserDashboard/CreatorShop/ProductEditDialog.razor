@@ -1,0 +1,246 @@
+@using MudBlazor
+@using Tribe.Bib.Models.TribeRelated
+@using Tribe.Services.ClientServices.ShopServices
+@using static Tribe.Bib.ShopRelated.ShopStruckture
+
+@inject IProductClientService ProductClient
+@inject IRaffleClientService RaffleService
+@inject ISnackbar Snackbar
+
+<MudDialog MaxWidth="MaxWidth.Medium" FullWidth="true" DisableBackdropClick="true" CloseOnEscapeKey="false">
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudGrid>
+                <MudItem xs="12" md="8">
+                    <MudStack Spacing="3">
+                        <MudText Typo="Typo.h5">@(string.IsNullOrEmpty(_editProduct?.Id) ? "Neues Produkt" : "Produkt bearbeiten")</MudText>
+                        <MudTextField @bind-Value="_editProduct.Title" Label="Titel" Required="true" />
+                        <MudTextField @bind-Value="_editProduct.Description" Label="Beschreibung" Lines="3" />
+                        <MudNumericField T="decimal" @bind-Value="_editProduct.Price" Label="Preis (€)" Min="0" Required="true" />
+                        <MudSelect T="string" @bind-Value="_editProduct.Status" Label="Status" Required="true">
+                            @foreach (var status in _statusOptions)
+                            {
+                                <MudSelectItem Value="@status">@_statusLabels[status]</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudText Typo="Typo.subtitle2" Class="mt-3">Raffle anhängen</MudText>
+                        <MudSelect T="string" @bind-Value="_selectedRaffleId" Label="Raffle wählen">
+                            <MudSelectItem Value="@string.Empty">(keine)</MudSelectItem>
+                            @foreach (var raffle in _raffles)
+                            {
+                                <MudSelectItem Value="@raffle.Id">@raffle.Title</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Disabled="string.IsNullOrEmpty(_selectedRaffleId) || string.IsNullOrEmpty(_editProduct?.Id)" OnClick="BindRaffle">Raffle an Produkt binden</MudButton>
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudPaper Class="pa-4" Elevation="1">
+                        <MudText Typo="Typo.subtitle2">Raffle Details</MudText>
+                        @if (_boundRaffle != null)
+                        {
+                            <MudText Typo="Typo.h6">@_boundRaffle.Title</MudText>
+                            <MudText Typo="Typo.body2">@(_boundRaffle.PrizeName ?? "Kein Preis angegeben")</MudText>
+                            <MudText Typo="Typo.caption">
+                                Typ: @_boundRaffle.RaffleType<br />
+                                Status: @_boundRaffle.Status<br />
+                                Zeitraum: @(_boundRaffle.StartDate?.ToLocalTime().ToString("dd.MM.yyyy")) - @(_boundRaffle.EndDate?.ToLocalTime().ToString("dd.MM.yyyy"))
+                            </MudText>
+                            <MudText Typo="Typo.body2" Class="mt-2">Einträge: @_boundRaffle.CurrentEntries / @_boundRaffle.MaxEntries</MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Noch keine Raffle verknüpft.</MudText>
+                        }
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="!_isValid" OnClick="SaveAsync">Speichern</MudButton>
+        <MudButton Variant="Variant.Text" OnClick="Cancel">Abbrechen</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance Dialog { get; set; } = default!;
+
+    [Parameter]
+    public ShopProduct Product { get; set; } = new PhysicalProduct();
+
+    private MudForm? _form;
+    private bool _isValid;
+    private ShopProduct _editProduct = new PhysicalProduct();
+    private List<Raffle> _raffles = new();
+    private string? _selectedRaffleId;
+    private Raffle? _boundRaffle;
+    private readonly string[] _statusOptions = { "Active", "Draft", "Inactive" };
+    private readonly Dictionary<string, string> _statusLabels = new()
+    {
+        { "Active", "Aktiv" },
+        { "Draft", "Entwurf" },
+        { "Inactive", "Inaktiv" }
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _editProduct = CloneProduct(Product);
+        _selectedRaffleId = null;
+        await LoadRaffles();
+        await RefreshBoundRaffleAsync();
+    }
+
+    private ShopProduct CloneProduct(ShopProduct source)
+    {
+        return source switch
+        {
+            PhysicalProduct physical => CloneViaJson(physical),
+            VideoProduct video => CloneViaJson(video),
+            ImageProduct image => CloneViaJson(image),
+            ServiceProduct service => CloneViaJson(service),
+            EventTicketProduct ticket => CloneViaJson(ticket),
+            _ => new PhysicalProduct
+            {
+                Title = source.Title,
+                Description = source.Description,
+                Price = source.Price,
+                CreatorProfileId = source.CreatorProfileId,
+                Status = source.Status,
+                CategoryId = source.CategoryId,
+                Tags = source.Tags?.ToList() ?? new List<string>(),
+            }
+        };
+    }
+
+    private static T CloneViaJson<T>(T source) where T : ShopProduct
+    {
+        var options = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var json = System.Text.Json.JsonSerializer.Serialize(source, options);
+        var clone = System.Text.Json.JsonSerializer.Deserialize<T>(json, options);
+        return clone ?? source;
+    }
+
+    private async Task LoadRaffles()
+    {
+        var data = await RaffleService.GetCreatorRafflesAsync();
+        if (data != null)
+        {
+            _raffles = data;
+        }
+    }
+
+    private async Task RefreshBoundRaffleAsync()
+    {
+        if (string.IsNullOrEmpty(_editProduct?.Id))
+        {
+            _boundRaffle = null;
+            return;
+        }
+
+        _boundRaffle = await RaffleService.GetProductRaffleAsync(_editProduct.Id);
+    }
+
+    private async Task SaveAsync()
+    {
+        _form?.Validate();
+        if (!_isValid)
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(_editProduct?.Id))
+        {
+            Snackbar.Add("Produkt lässt sich nicht speichern", Severity.Error);
+            return;
+        }
+
+        var dto = BuildProductDto();
+        var success = await ProductClient.UpdateProductAsync(_editProduct.Id, dto);
+        if (success)
+        {
+            Snackbar.Add("Produkt gespeichert", Severity.Success);
+            Dialog.Close(DialogResult.Ok(true));
+        }
+        else
+        {
+            Snackbar.Add("Fehler beim Speichern", Severity.Error);
+        }
+    }
+
+    private async Task BindRaffle()
+    {
+        if (string.IsNullOrEmpty(_selectedRaffleId) || string.IsNullOrEmpty(_editProduct?.Id))
+        {
+            return;
+        }
+
+        var bound = await RaffleService.BindRaffleToProductAsync(_selectedRaffleId, _editProduct.Id);
+        if (bound)
+        {
+            Snackbar.Add("Raffle erfolgreich gebunden", Severity.Success);
+            await RefreshBoundRaffleAsync();
+        }
+        else
+        {
+            Snackbar.Add("Fehler beim Binden", Severity.Error);
+        }
+    }
+
+    private void Cancel() => Dialog.Cancel();
+
+    private ProductDto BuildProductDto()
+    {
+        var dto = new ProductDto
+        {
+            Id = _editProduct.Id,
+            Title = _editProduct.Title,
+            Description = _editProduct.Description,
+            Price = _editProduct.Price,
+            OriginalPrice = (_editProduct as PhysicalProduct)?.OriginalPrice,
+            Status = _editProduct.Status,
+            CategoryId = _editProduct.CategoryId,
+            ThumbnailUrl = _editProduct.ThumbnailUrl,
+            ImageUrls = _editProduct.ImageUrls?.ToList() ?? new List<string>(),
+            Tags = _editProduct.Tags?.ToList() ?? new List<string>(),
+            SeoTitle = _editProduct.SeoTitle,
+            SeoDescription = _editProduct.SeoDescription
+        };
+
+        switch (_editProduct)
+        {
+            case PhysicalProduct physical:
+                dto.ProductType = ProductTypes.Physical;
+                dto.SKU = physical.SKU;
+                dto.StockQuantity = physical.StockQuantity;
+                dto.TrackInventory = physical.TrackInventory;
+                dto.ShippingCost = physical.ShippingCost;
+                dto.FreeShippingOver = physical.FreeShippingOver;
+                dto.FreeShippingThreshold = physical.FreeShippingThreshold;
+                break;
+            case VideoProduct video:
+                dto.ProductType = ProductTypes.Video;
+                dto.VideoUrl = video.VideoUrl;
+                break;
+            case ImageProduct image:
+                dto.ProductType = ProductTypes.Image;
+                dto.HighResImageUrls = image.HighResImageUrls?.ToList();
+                dto.ImageFormat = image.ImageFormat;
+                break;
+            case ServiceProduct service:
+                dto.ProductType = ProductTypes.Service;
+                dto.DurationMinutes = service.DurationMinutes;
+                break;
+            case EventTicketProduct ticket:
+                dto.ProductType = ProductTypes.EventTicket;
+                dto.EventDate = ticket.EventDate;
+                dto.EventEndDate = ticket.EventEndDate;
+                dto.EventLocation = ticket.EventLocation;
+                dto.MaxTickets = ticket.MaxTickets;
+                break;
+        }
+
+        return dto;
+    }
+}

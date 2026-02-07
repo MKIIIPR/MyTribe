@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -11,7 +12,7 @@ namespace Tribe.Controller.ShopController
 {
     [ApiController]
     [Route("api/shop/orders")]
-    [Authorize]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class OrdersController : ControllerBase
     {
         private readonly ShopDbContext _context;
@@ -31,7 +32,7 @@ namespace Tribe.Controller.ShopController
             _logger = logger;
         }
 
-        private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
+        private string GetUserId() => User.FindFirstValue("profileId") ?? string.Empty;
 
         // Create order (customer)
         [HttpPost]

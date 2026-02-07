@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Tribe.Data;
+using Tribe.Bib.Models.TribeRelated;
 
 namespace YourProject.Controllers;
 

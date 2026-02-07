@@ -1,11 +1,10 @@
 @namespace Tribe.Ui.Pages.UserDashboard.CreatorRaffle
 @using MudBlazor
 @using Tribe.Bib.Models.TribeRelated
-@using System.Security.Claims
-@inject HttpClient Http
+@using Tribe.Services.ClientServices.ShopServices
+@inject IRaffleClientService RaffleService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
-@inject AuthenticationStateProvider AuthStateProvider
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
     <MudStack Spacing="3">
@@ -102,21 +101,20 @@
 @code {
     private List<Raffle> _raffles = new();
     private bool _isLoading = false;
-    private string? _creatorId;
+    private bool _dataLoaded = false;
 
     protected override async Task OnInitializedAsync()
     {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        
-        if (user?.FindFirst(ClaimTypes.NameIdentifier)?.Value is string userId)
+        _isLoading = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
         {
-            _creatorId = userId;
             await LoadRaffles();
-        }
-        else
-        {
-            _isLoading = false;
+            _dataLoaded = true;
+            StateHasChanged();
         }
     }
 
@@ -125,17 +123,8 @@
         try
         {
             _isLoading = true;
-            var response = await Http.GetAsync("api/shop/raffles/creator/all");
-            if (response.IsSuccessStatusCode)
-            {
-                var json = await response.Content.ReadAsStringAsync();
-                var options = new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase };
-                _raffles = System.Text.Json.JsonSerializer.Deserialize<List<Raffle>>(json, options) ?? new();
-            }
-            else
-            {
-                Snackbar.Add("Fehler beim Laden der Raffles", Severity.Error);
-            }
+            StateHasChanged();
+            _raffles = await RaffleService.GetCreatorRafflesAsync() ?? new();
         }
         catch (Exception ex)
         {
@@ -151,7 +140,7 @@
     {
         var parameters = new DialogParameters<RaffleEditDialog> 
         { 
-            { x => x.Raffle, new Raffle { CreatorProfileId = _creatorId ?? string.Empty } } 
+            { x => x.Raffle, new Raffle() } 
         };
         var dialog = await DialogService.ShowAsync<RaffleEditDialog>("Neue Raffle erstellen", parameters);
         var result = await dialog.Result;
@@ -200,25 +189,18 @@
             "Bestätigung", 
             "Möchten Sie diese Raffle wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
             yesText: "Ja, löschen", cancelText: "Abbrechen");
-        
+
         if (confirmed != true) return;
 
-        try
+        var success = await RaffleService.DeleteRaffleAsync(raffleId);
+        if (success)
         {
-            var response = await Http.DeleteAsync($"api/shop/raffles/{raffleId}");
-            if (response.IsSuccessStatusCode)
-            {
-                Snackbar.Add("Raffle gelöscht", Severity.Success);
-                await LoadRaffles();
-            }
-            else
-            {
-                Snackbar.Add("Fehler beim Löschen", Severity.Error);
-            }
+            Snackbar.Add("Raffle gelöscht", Severity.Success);
+            await LoadRaffles();
         }
-        catch (Exception ex)
+        else
         {
-            Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+            Snackbar.Add("Fehler beim Löschen", Severity.Error);
         }
     }
 

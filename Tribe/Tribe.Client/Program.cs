@@ -37,6 +37,7 @@ builder.Services.AddScoped<IOrderClientService, OrderClientService>();
 // Unified shop creator facade
 builder.Services.AddScoped<IShopCreatorService, Tribe.Services.ClientServices.ShopServices.ShopCreatorService>();
 builder.Services.AddScoped<IRaffleClientService, RaffleClientService>();
+builder.Services.AddScoped<ICreatorProfileClientService, CreatorProfileClientService>();
 // Shop UI service for cart + local state
 builder.Services.AddSingleton<ShopService>();
 #endregion

@@ -1,10 +1,11 @@
 @using MudBlazor
+@using Tribe.Bib.Models.TribeRelated
 @using Tribe.Bib.ShopRelated
 @using static Tribe.Bib.ShopRelated.ShopStruckture
 @inject Tribe.Services.ClientServices.ShopServices.IProductClientService ProductClient
+@inject Tribe.Services.ClientServices.ShopServices.IRaffleClientService RaffleService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
-@inject NavigationManager Navigation
 
 <MudPaper Class="pa-4 mt-4">
     <MudStack Spacing="3">
@@ -29,12 +30,23 @@
                     <MudTh>Titel</MudTh>
                     <MudTh>Preis</MudTh>
                     <MudTh>Status</MudTh>
+                    <MudTh>Raffle</MudTh>
                     <MudTh>Aktionen</MudTh>
                 </HeaderContent>
                 <RowTemplate Context="p">
                     <MudTd>@p.Title</MudTd>
                     <MudTd>€@p.Price.ToString("F2")</MudTd>
                     <MudTd>@p.Status</MudTd>
+                    <MudTd>
+                        @if (_productRaffles.TryGetValue(p.Id, out var raffle) && raffle != null)
+                        {
+                            <MudChip T="string" Color="Color.Info" Variant="Variant.Filled" Size="Size.Small" Text="@raffle.Title" />
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption">Keine</MudText>
+                        }
+                    </MudTd>
                     <MudTd>
                         <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(async () => await Edit(p.Id))">Bearbeiten</MudButton>
                         <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(async () => await Delete(p.Id))">Löschen</MudButton>
@@ -47,6 +59,7 @@
 
 @code {
     private List<ShopProduct> _products = new();
+    private Dictionary<string, Raffle?> _productRaffles = new();
     private bool _isLoading = false;
 
     protected override async Task OnInitializedAsync()
@@ -60,6 +73,7 @@
         {
             _isLoading = true;
             _products = await ProductClient.GetMyProductsAsync() ?? new List<ShopProduct>();
+            await LoadProductRaffles();
         }
         catch (Exception ex)
         {
@@ -71,15 +85,58 @@
         }
     }
 
-    private async Task CreateNew()
+    private async Task LoadProductRaffles()
     {
-        Navigation.NavigateTo("/creator/shop/product/edit");
+        var tasks = _products.Select(async product =>
+        {
+            try
+            {
+                return (product.Id, await RaffleService.GetProductRaffleAsync(product.Id));
+            }
+            catch
+            {
+                return (product.Id, (Raffle?)null);
+            }
+        });
+
+        var results = await Task.WhenAll(tasks);
+        _productRaffles = results.ToDictionary(r => r.Item1, r => r.Item2);
     }
 
-    private async Task Edit(string id)
-    {
-        Navigation.NavigateTo($"/creator/shop/product/edit/{id}");
-    }
+        private async Task CreateNew()
+        {
+            var parameters = new DialogParameters<ProductEditDialog>
+            {
+                { x => x.Product, new PhysicalProduct() }
+            };
+            var dialog = DialogService.Show<ProductEditDialog>("Neues Produkt", parameters);
+            var result = await dialog.Result;
+            if (!result.Canceled)
+            {
+                await LoadProducts();
+            }
+        }
+
+        private async Task Edit(string id)
+        {
+            var product = await ProductClient.GetProductByIdAsync(id);
+            if (product == null)
+            {
+                Snackbar.Add("Produkt nicht gefunden", Severity.Warning);
+                return;
+            }
+
+            var parameters = new DialogParameters<ProductEditDialog>
+            {
+                { x => x.Product, product }
+            };
+            var dialog = DialogService.Show<ProductEditDialog>("Produkt bearbeiten", parameters);
+            var result = await dialog.Result;
+            if (!result.Canceled)
+            {
+                await LoadProducts();
+            }
+        }
 
     private async Task Delete(string id)
     {
