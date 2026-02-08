@@ -27,4 +27,8 @@
     <ProjectReference Include="..\Tribe.Bib\Tribe.Bib.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="ClientServices\CreatorOrgaServices\" />
+  </ItemGroup>
+
 </Project>

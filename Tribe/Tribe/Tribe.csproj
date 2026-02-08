@@ -26,6 +26,7 @@
 
 
   <ItemGroup>
+    <Folder Include="Controller\CreatorOrga\" />
     <Folder Include="Data\Migrations\" />
     <Folder Include="Hub\" />
     <Folder Include="Service\" />
