@@ -7,59 +7,175 @@
 @inject IRaffleClientService RaffleService
 @inject ISnackbar Snackbar
 
-<MudDialog MaxWidth="MaxWidth.Medium" FullWidth="true" DisableBackdropClick="true" CloseOnEscapeKey="false">
+<MudDialog MaxWidth="MaxWidth.Large" FullWidth="true" DisableBackdropClick="true" CloseOnEscapeKey="false">
     <DialogContent>
         <MudForm @ref="_form" @bind-IsValid="_isValid">
-            <MudGrid>
-                <MudItem xs="12" md="8">
-                    <MudStack Spacing="3">
-                        <MudText Typo="Typo.h5">@(string.IsNullOrEmpty(_editProduct?.Id) ? "Neues Produkt" : "Produkt bearbeiten")</MudText>
-                        <MudTextField @bind-Value="_editProduct.Title" Label="Titel" Required="true" />
-                        <MudTextField @bind-Value="_editProduct.Description" Label="Beschreibung" Lines="3" />
-                        <MudNumericField T="decimal" @bind-Value="_editProduct.Price" Label="Preis (€)" Min="0" Required="true" />
-                        <MudSelect T="string" @bind-Value="_editProduct.Status" Label="Status" Required="true">
-                            @foreach (var status in _statusOptions)
-                            {
-                                <MudSelectItem Value="@status">@_statusLabels[status]</MudSelectItem>
-                            }
-                        </MudSelect>
-                        <MudText Typo="Typo.subtitle2" Class="mt-3">Raffle anhängen</MudText>
-                        <MudSelect T="string" @bind-Value="_selectedRaffleId" Label="Raffle wählen">
-                            <MudSelectItem Value="@string.Empty">(keine)</MudSelectItem>
-                            @foreach (var raffle in _raffles)
-                            {
-                                <MudSelectItem Value="@raffle.Id">@raffle.Title</MudSelectItem>
-                            }
-                        </MudSelect>
-                        <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Disabled="string.IsNullOrEmpty(_selectedRaffleId) || string.IsNullOrEmpty(_editProduct?.Id)" OnClick="BindRaffle">Raffle an Produkt binden</MudButton>
-                    </MudStack>
-                </MudItem>
-                <MudItem xs="12" md="4">
-                    <MudPaper Class="pa-4" Elevation="1">
-                        <MudText Typo="Typo.subtitle2">Raffle Details</MudText>
-                        @if (_boundRaffle != null)
+            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
+                <!-- Tab 1: Basis-Informationen -->
+                <MudTabPanel Text="Basis" Icon="@Icons.Material.Filled.Info">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.h5" Class="mb-3">@(string.IsNullOrEmpty(_editProduct?.Id) ? "Neues Produkt erstellen" : "Produkt bearbeiten")</MudText>
+                        </MudItem>
+
+                        <!-- Produkttyp Auswahl (nur bei neuem Produkt) -->
+                        @if (string.IsNullOrEmpty(_editProduct?.Id) || _isNewProduct)
                         {
-                            <MudText Typo="Typo.h6">@_boundRaffle.Title</MudText>
-                            <MudText Typo="Typo.body2">@(_boundRaffle.PrizeName ?? "Kein Preis angegeben")</MudText>
-                            <MudText Typo="Typo.caption">
-                                Typ: @_boundRaffle.RaffleType<br />
-                                Status: @_boundRaffle.Status<br />
-                                Zeitraum: @(_boundRaffle.StartDate?.ToLocalTime().ToString("dd.MM.yyyy")) - @(_boundRaffle.EndDate?.ToLocalTime().ToString("dd.MM.yyyy"))
-                            </MudText>
-                            <MudText Typo="Typo.body2" Class="mt-2">Einträge: @_boundRaffle.CurrentEntries / @_boundRaffle.MaxEntries</MudText>
+                            <MudItem xs="12">
+                                <MudSelect T="string" @bind-Value="_selectedProductType" Label="Produkttyp *" Required="true" Variant="Variant.Outlined">
+                                    <MudSelectItem Value="@ProductTypes.Physical">Physisches Produkt</MudSelectItem>
+                                    <MudSelectItem Value="@ProductTypes.Video">Video / Digital</MudSelectItem>
+                                    <MudSelectItem Value="@ProductTypes.Image">Bilder / Fotos</MudSelectItem>
+                                    <MudSelectItem Value="@ProductTypes.Service">Dienstleistung</MudSelectItem>
+                                    <MudSelectItem Value="@ProductTypes.EventTicket">Event-Ticket</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
                         }
-                        else
-                        {
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Noch keine Raffle verknüpft.</MudText>
-                        }
-                    </MudPaper>
-                </MudItem>
-            </MudGrid>
+
+                        <MudItem xs="12" md="8">
+                            <MudTextField @bind-Value="_editProduct.Title" Label="Titel *" Required="true" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudNumericField T="decimal" @bind-Value="_editProduct.Price" Label="Preis (€) *" Min="0" Required="true" Variant="Variant.Outlined" Format="F2" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_editProduct.Description" Label="Beschreibung" Lines="4" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudSelect T="string" @bind-Value="_editProduct.Status" Label="Status" Variant="Variant.Outlined">
+                                @foreach (var status in _statusOptions)
+                                {
+                                    <MudSelectItem Value="@status">@_statusLabels[status]</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudNumericField T="decimal?" @bind-Value="_originalPrice" Label="Original-Preis (€)" Variant="Variant.Outlined" Format="F2" HelperText="Für durchgestrichenen Preis" />
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <!-- Tab 2: Bilder -->
+                <MudTabPanel Text="Bilder" Icon="@Icons.Material.Filled.Image">
+                    <MudGrid>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.h6" Class="mb-3">Produktbilder</MudText>
+                        </MudItem>
+
+                        <!-- Thumbnail -->
+                        <MudItem xs="12" md="6">
+                            <MudPaper Elevation="1" Class="pa-4">
+                                <MudText Typo="Typo.subtitle2" Class="mb-2">Hauptbild / Thumbnail</MudText>
+                                @if (!string.IsNullOrEmpty(_editProduct.ThumbnailUrl))
+                                {
+                                    <MudImage Src="@_editProduct.ThumbnailUrl" Width="200" Height="200" ObjectFit="ObjectFit.Cover" Class="rounded mb-2" />
+                                    <MudButton Color="Color.Error" Variant="Variant.Text" Size="Size.Small" OnClick="@(() => _editProduct.ThumbnailUrl = null)">
+                                        Entfernen
+                                    </MudButton>
+                                }
+                                else
+                                {
+                                    <MudPaper Elevation="0" Class="pa-4 d-flex align-center justify-center" Style="height: 200px; background: #f5f5f5; border: 2px dashed #ccc;">
+                                        <MudText Color="Color.Secondary">Kein Bild</MudText>
+                                    </MudPaper>
+                                }
+                                <div class="mt-2">
+                                    <Tribe.Ui.Components.FileUploader OnImageUploaded="HandleThumbnailUpload" />
+                                </div>
+                            </MudPaper>
+                        </MudItem>
+
+                        <!-- Weitere Bilder -->
+                        <MudItem xs="12" md="6">
+                            <MudPaper Elevation="1" Class="pa-4">
+                                <MudText Typo="Typo.subtitle2" Class="mb-2">Weitere Bilder (@(_editProduct.ImageUrls?.Count ?? 0))</MudText>
+                                <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2">
+                                    @if (_editProduct.ImageUrls != null)
+                                    {
+                                        @foreach (var (url, index) in _editProduct.ImageUrls.Select((u, i) => (u, i)))
+                                        {
+                                            <MudPaper Elevation="1" Class="pa-1 position-relative">
+                                                <MudImage Src="@url" Width="80" Height="80" ObjectFit="ObjectFit.Cover" Class="rounded" />
+                                                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Error" 
+                                                              Style="position: absolute; top: -8px; right: -8px; background: white;"
+                                                              OnClick="@(() => RemoveImage(index))" />
+                                            </MudPaper>
+                                        }
+                                    }
+                                </MudStack>
+                                <div class="mt-2">
+                                    <Tribe.Ui.Components.FileUploader OnImageUploaded="HandleAdditionalImageUpload" MultipleUpload="true" />
+                                </div>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+
+                <!-- Tab 3: Typ-spezifische Details -->
+                <MudTabPanel Text="Details" Icon="@Icons.Material.Filled.Settings">
+                    @switch (_selectedProductType)
+                    {
+                        case ProductTypes.Physical:
+                            <PhysicalProductFields Product="@((PhysicalProduct)_editProduct)" />
+                            break;
+                        case ProductTypes.Video:
+                            <VideoProductFields Product="@((VideoProduct)_editProduct)" />
+                            break;
+                        case ProductTypes.Image:
+                            <ImageProductFields Product="@((ImageProduct)_editProduct)" />
+                            break;
+                        case ProductTypes.Service:
+                            <ServiceProductFields Product="@((ServiceProduct)_editProduct)" />
+                            break;
+                        case ProductTypes.EventTicket:
+                            <EventTicketProductFields Product="@((EventTicketProduct)_editProduct)" />
+                            break;
+                    }
+                </MudTabPanel>
+
+                <!-- Tab 4: Raffle -->
+                <MudTabPanel Text="Raffle" Icon="@Icons.Material.Filled.EmojiEvents">
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">Raffle an Produkt binden</MudText>
+                            <MudSelect T="string" @bind-Value="_selectedRaffleId" Label="Raffle wählen" Variant="Variant.Outlined">
+                                <MudSelectItem Value="@string.Empty">(keine)</MudSelectItem>
+                                @foreach (var raffle in _raffles)
+                                {
+                                    <MudSelectItem Value="@raffle.Id">@raffle.Title</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudButton Color="Color.Secondary" Variant="Variant.Outlined" Class="mt-2"
+                                      Disabled="string.IsNullOrEmpty(_selectedRaffleId) || string.IsNullOrEmpty(_editProduct?.Id)" 
+                                      OnClick="BindRaffle">
+                                Raffle binden
+                            </MudButton>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudPaper Class="pa-4" Elevation="1">
+                                <MudText Typo="Typo.subtitle2">Aktuell gebundene Raffle</MudText>
+                                @if (_boundRaffle != null)
+                                {
+                                    <MudText Typo="Typo.h6">@_boundRaffle.Title</MudText>
+                                    <MudText Typo="Typo.body2">@(_boundRaffle.PrizeName ?? "Kein Preis")</MudText>
+                                    <MudText Typo="Typo.caption">Status: @_boundRaffle.Status</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">Keine Raffle verknüpft</MudText>
+                                }
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </MudTabPanel>
+            </MudTabs>
         </MudForm>
     </DialogContent>
     <DialogActions>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="!_isValid" OnClick="SaveAsync">Speichern</MudButton>
         <MudButton Variant="Variant.Text" OnClick="Cancel">Abbrechen</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="!_isValid" OnClick="SaveAsync">
+            @(string.IsNullOrEmpty(_editProduct?.Id) || _isNewProduct ? "Erstellen" : "Speichern")
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -70,12 +186,19 @@
     [Parameter]
     public ShopProduct Product { get; set; } = new PhysicalProduct();
 
+    [Parameter]
+    public bool IsNewProduct { get; set; } = false;
+
     private MudForm? _form;
     private bool _isValid;
     private ShopProduct _editProduct = new PhysicalProduct();
     private List<Raffle> _raffles = new();
     private string? _selectedRaffleId;
     private Raffle? _boundRaffle;
+    private string _selectedProductType = ProductTypes.Physical;
+    private decimal? _originalPrice;
+    private bool _isNewProduct => IsNewProduct || string.IsNullOrEmpty(Product?.Id);
+
     private readonly string[] _statusOptions = { "Active", "Draft", "Inactive" };
     private readonly Dictionary<string, string> _statusLabels = new()
     {
@@ -86,10 +209,62 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        _editProduct = CloneProduct(Product);
+        if (_isNewProduct)
+        {
+            _editProduct = CreateProductByType(_selectedProductType);
+        }
+        else
+        {
+            _editProduct = CloneProduct(Product);
+            _selectedProductType = GetProductType(_editProduct);
+        }
+
+        _originalPrice = _editProduct.OriginalPrice;
         _selectedRaffleId = null;
         await LoadRaffles();
         await RefreshBoundRaffleAsync();
+    }
+
+    private string GetProductType(ShopProduct product) => product switch
+    {
+        PhysicalProduct => ProductTypes.Physical,
+        VideoProduct => ProductTypes.Video,
+        ImageProduct => ProductTypes.Image,
+        ServiceProduct => ProductTypes.Service,
+        EventTicketProduct => ProductTypes.EventTicket,
+        _ => ProductTypes.Physical
+    };
+
+    private ShopProduct CreateProductByType(string productType) => productType switch
+    {
+        ProductTypes.Physical => new PhysicalProduct(),
+        ProductTypes.Video => new VideoProduct(),
+        ProductTypes.Image => new ImageProduct(),
+        ProductTypes.Service => new ServiceProduct(),
+        ProductTypes.EventTicket => new EventTicketProduct(),
+        _ => new PhysicalProduct()
+    };
+
+    private void HandleThumbnailUpload(string base64Image)
+    {
+        _editProduct.ThumbnailUrl = base64Image;
+        StateHasChanged();
+    }
+
+    private void HandleAdditionalImageUpload(string base64Image)
+    {
+        _editProduct.ImageUrls ??= new List<string>();
+        _editProduct.ImageUrls.Add(base64Image);
+        StateHasChanged();
+    }
+
+    private void RemoveImage(int index)
+    {
+        if (_editProduct.ImageUrls != null && index >= 0 && index < _editProduct.ImageUrls.Count)
+        {
+            _editProduct.ImageUrls.RemoveAt(index);
+            StateHasChanged();
+        }
     }
 
     private ShopProduct CloneProduct(ShopProduct source)
@@ -150,22 +325,44 @@
             return;
         }
 
-        if (string.IsNullOrEmpty(_editProduct?.Id))
-        {
-            Snackbar.Add("Produkt lässt sich nicht speichern", Severity.Error);
-            return;
-        }
+        _editProduct.OriginalPrice = _originalPrice;
 
-        var dto = BuildProductDto();
-        var success = await ProductClient.UpdateProductAsync(_editProduct.Id, dto);
-        if (success)
+        try
         {
-            Snackbar.Add("Produkt gespeichert", Severity.Success);
-            Dialog.Close(DialogResult.Ok(true));
+            if (_isNewProduct)
+            {
+                // Neues Produkt erstellen
+                var dto = BuildProductDto();
+                var created = await ProductClient.CreateProductAsync(dto);
+                if (created != null)
+                {
+                    Snackbar.Add("Produkt erstellt", Severity.Success);
+                    Dialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add("Fehler beim Erstellen", Severity.Error);
+                }
+            }
+            else
+            {
+                // Bestehendes Produkt aktualisieren
+                var dto = BuildProductDto();
+                var success = await ProductClient.UpdateProductAsync(_editProduct.Id, dto);
+                if (success)
+                {
+                    Snackbar.Add("Produkt gespeichert", Severity.Success);
+                    Dialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add("Fehler beim Speichern", Severity.Error);
+                }
+            }
         }
-        else
+        catch (Exception ex)
         {
-            Snackbar.Add("Fehler beim Speichern", Severity.Error);
+            Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
         }
     }
 

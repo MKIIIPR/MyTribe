@@ -1,0 +1,26 @@
+@page "/creator/shop/orders"
+@using MudBlazor
+@using Tribe.Services.States
+@inject UserState UserState
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <AuthorizeView>
+        <Authorized>
+            @if (UserState?.TribeProfile?.IsCreator == true)
+            {
+                <Tribe.Ui.Pages.UserDashboard.CreatorShop.Orders />
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Warning">
+                    Sie müssen Creator sein, um Bestellungen zu verwalten.
+                </MudAlert>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <MudAlert Severity="Severity.Error">
+                Bitte melden Sie sich an.
+            </MudAlert>
+        </NotAuthorized>
+    </AuthorizeView>
+</MudContainer>

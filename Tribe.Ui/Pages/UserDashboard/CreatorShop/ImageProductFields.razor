@@ -1,0 +1,48 @@
+@using MudBlazor
+@using static Tribe.Bib.ShopRelated.ShopStruckture
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudText Typo="Typo.h6" Class="mb-3">Bilder-Produkt - Details</MudText>
+    </MudItem>
+    
+    <MudItem xs="12" md="4">
+        <MudSelect T="string" @bind-Value="Product.ImageFormat" Label="Bildformat" Variant="Variant.Outlined">
+            <MudSelectItem Value="@("jpg")">JPG</MudSelectItem>
+            <MudSelectItem Value="@("png")">PNG</MudSelectItem>
+            <MudSelectItem Value="@("webp")">WebP</MudSelectItem>
+            <MudSelectItem Value="@("raw")">RAW</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudTextField @bind-Value="Product.Resolution" Label="Auflösung" Variant="Variant.Outlined" Placeholder="1920x1080" />
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudNumericField T="int" @bind-Value="Product.PhotoCount" Label="Anzahl Bilder" Min="1" Variant="Variant.Outlined" />
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudCheckBox @bind-Value="Product.IsPhotoSet" Label="Ist ein Foto-Set (mehrere Bilder)" Color="Color.Primary" />
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.subtitle1">Download-Einstellungen</MudText>
+    </MudItem>
+    
+    <MudItem xs="12" md="6">
+        <MudNumericField T="int" @bind-Value="Product.MaxDownloads" Label="Max. Downloads" Min="1" Variant="Variant.Outlined" />
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudTextField @bind-Value="Product.DownloadUrl" Label="Download URL (Einzelbild)" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12">
+        <MudTextField @bind-Value="Product.ZipDownloadUrl" Label="ZIP Download URL (für Sets)" Variant="Variant.Outlined" />
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter]
+    public ImageProduct Product { get; set; } = new();
+}

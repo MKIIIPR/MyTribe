@@ -1,0 +1,80 @@
+@using MudBlazor
+@using static Tribe.Bib.ShopRelated.ShopStruckture
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudText Typo="Typo.h6" Class="mb-3">Event-Ticket - Details</MudText>
+    </MudItem>
+    
+    <MudItem xs="12" md="6">
+        <MudDatePicker @bind-Date="_eventDate" Label="Event-Datum *" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <MudDatePicker @bind-Date="_eventEndDate" Label="Event-Ende" Variant="Variant.Outlined" />
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudTextField @bind-Value="Product.EventLocation" Label="Veranstaltungsort *" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12">
+        <MudTextField @bind-Value="Product.EventAddress" Label="Adresse" Variant="Variant.Outlined" />
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.subtitle1">Ticket-Einstellungen</MudText>
+    </MudItem>
+    
+    <MudItem xs="12" md="6">
+        <MudNumericField T="int" @bind-Value="Product.MaxTickets" Label="Max. Tickets" Min="1" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <MudNumericField T="int" @bind-Value="Product.SoldTickets" Label="Verkaufte Tickets" Min="0" Variant="Variant.Outlined" Disabled="true" />
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudCheckBox @bind-Value="Product.IsOnlineEvent" Label="Online-Event" Color="Color.Primary" />
+    </MudItem>
+    
+    @if (Product.IsOnlineEvent)
+    {
+        <MudItem xs="12">
+            <MudTextField @bind-Value="Product.StreamUrl" Label="Stream URL" Variant="Variant.Outlined" HelperText="URL wird nach Ticketkauf angezeigt" />
+        </MudItem>
+    }
+    
+    <MudItem xs="12">
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.subtitle1">Ticket-Typen</MudText>
+    </MudItem>
+    
+    <MudItem xs="12" md="6">
+        <MudSelect T="string" @bind-Value="Product.TicketType" Label="Ticket-Typ" Variant="Variant.Outlined">
+            <MudSelectItem Value="@("standard")">Standard</MudSelectItem>
+            <MudSelectItem Value="@("vip")">VIP</MudSelectItem>
+            <MudSelectItem Value="@("early_bird")">Early Bird</MudSelectItem>
+            <MudSelectItem Value="@("group")">Gruppen-Ticket</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudCheckBox @bind-Value="Product.RequiresIdentification" Label="Ausweis bei Einlass erforderlich" Color="Color.Primary" />
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter]
+    public EventTicketProduct Product { get; set; } = new();
+
+    private DateTime? _eventDate
+    {
+        get => Product.EventDate == default ? null : Product.EventDate;
+        set => Product.EventDate = value ?? DateTime.UtcNow;
+    }
+
+    private DateTime? _eventEndDate
+    {
+        get => Product.EventEndDate;
+        set => Product.EventEndDate = value;
+    }
+}

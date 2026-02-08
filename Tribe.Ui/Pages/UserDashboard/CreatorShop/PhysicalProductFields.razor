@@ -1,0 +1,65 @@
+@using MudBlazor
+@using static Tribe.Bib.ShopRelated.ShopStruckture
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudText Typo="Typo.h6" Class="mb-3">Physisches Produkt - Details</MudText>
+    </MudItem>
+    
+    <MudItem xs="12" md="6">
+        <MudTextField @bind-Value="Product.SKU" Label="SKU / Artikelnummer" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <MudNumericField T="int" @bind-Value="Product.StockQuantity" Label="Lagerbestand" Min="0" Variant="Variant.Outlined" />
+    </MudItem>
+    
+    <MudItem xs="12" md="6">
+        <MudCheckBox @bind-Value="Product.TrackInventory" Label="Lagerbestand verfolgen" Color="Color.Primary" />
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.subtitle1">Versand</MudText>
+    </MudItem>
+    
+    <MudItem xs="12" md="4">
+        <MudNumericField T="decimal" @bind-Value="Product.ShippingCost" Label="Versandkosten (€)" Min="0" Variant="Variant.Outlined" Format="F2" />
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudCheckBox @bind-Value="Product.FreeShippingOver" Label="Gratis Versand ab" Color="Color.Primary" />
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudNumericField T="decimal" @bind-Value="Product.FreeShippingThreshold" Label="Ab Betrag (€)" Min="0" Variant="Variant.Outlined" Format="F2" Disabled="!Product.FreeShippingOver" />
+    </MudItem>
+    
+    <MudItem xs="12" md="4">
+        <MudNumericField T="int" @bind-Value="Product.EstimatedDeliveryDays" Label="Lieferzeit (Tage)" Min="1" Variant="Variant.Outlined" />
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.subtitle1">Produktdetails</MudText>
+    </MudItem>
+    
+    <MudItem xs="12" md="4">
+        <MudTextField @bind-Value="Product.Brand" Label="Marke" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudTextField @bind-Value="Product.Color" Label="Farbe" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudTextField @bind-Value="Product.Size" Label="Größe" Variant="Variant.Outlined" />
+    </MudItem>
+    
+    <MudItem xs="12" md="6">
+        <MudNumericField T="double?" @bind-Value="Product.Weight" Label="Gewicht (g)" Min="0" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <MudTextField @bind-Value="Product.Dimensions" Label="Maße (L x B x H cm)" Variant="Variant.Outlined" Placeholder="30 x 20 x 10" />
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter]
+    public PhysicalProduct Product { get; set; } = new();
+}

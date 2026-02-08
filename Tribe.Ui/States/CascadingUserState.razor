@@ -19,6 +19,7 @@
 
     // Lokaler Zustand, um zu prüfen, ob sich die Authentifizierung geändert hat
     private ClaimsPrincipal? _lastUser;
+    private bool _profileLoaded = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -28,8 +29,19 @@
 
     private async void OnAuthStateChanged(Task<AuthenticationState> task)
     {
-        await LoadAuthData();
-        await InvokeAsync(StateHasChanged);
+        var authState = await task;
+        var newUser = authState.User;
+
+        // Nur neu laden wenn sich der Auth-Status wirklich geändert hat
+        bool wasAuthenticated = _lastUser?.Identity?.IsAuthenticated ?? false;
+        bool isAuthenticated = newUser?.Identity?.IsAuthenticated ?? false;
+
+        if (wasAuthenticated != isAuthenticated)
+        {
+            _profileLoaded = false; // Reset profile loaded flag on auth change
+            await LoadAuthData();
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task LoadAuthData()
@@ -40,9 +52,9 @@
             var newCurrentUser = authState.User;
 
             // Prüfen, ob sich der Benutzer oder seine Claims geändert haben
-            if (!HasUserChanged(newCurrentUser, _lastUser))
+            if (!HasUserChanged(newCurrentUser, _lastUser) && _profileLoaded)
             {
-                // Wenn sich nichts geändert hat, beenden wir die Methode.
+                // Wenn sich nichts geändert hat und Profil bereits geladen, beenden wir die Methode.
                 return;
             }
 
@@ -55,17 +67,22 @@
             // Profil abrufen, wenn der Benutzer jetzt authentifiziert ist
             if (newCurrentUser.Identity?.IsAuthenticated == true)
             {
-                // Nur API-Aufruf, wenn der Benutzer gerade erst angemeldet wurde
-                // oder wenn das Profil noch nicht geladen wurde.
-                if (!_user.IsAuthenticated)
+                // Nur API-Aufruf, wenn das Profil noch nicht geladen wurde
+                if (!_profileLoaded || _user.TribeProfile == null)
                 {
+                    Logger.LogDebug("Loading profile from API...");
                     update.TribeProfile = await UserApiService.GetProfileAsync();
+                    _profileLoaded = true;
                 }
                 else
                 {
                     // Das bestehende Profil beibehalten
                     update.TribeProfile = _user.TribeProfile;
                 }
+            }
+            else
+            {
+                _profileLoaded = false;
             }
 
             // Den UserState-Dienst mit dem neuen Update-Objekt aktualisieren

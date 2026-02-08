@@ -1,0 +1,392 @@
+@* Page routes handled by Tribe.Client.Pages.CreatorPage *@
+@using MudBlazor
+@using Tribe.Bib.Models.TribeRelated
+@using Tribe.Bib.ShopRelated
+@using Tribe.Services.ClientServices.ShopServices
+@using static Tribe.Bib.ShopRelated.ShopStruckture
+@inject ICreatorProfileClientService CreatorService
+@inject IProductClientService ProductService
+@inject IRaffleClientService RaffleService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="pa-0">
+    @if (_isLoading)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px" />
+    }
+    else if (_creator == null)
+    {
+        <MudContainer Class="mt-8">
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Filled">
+                <MudText Typo="Typo.h5">Creator nicht gefunden</MudText>
+                <MudText>Der gesuchte Creator existiert nicht oder ist nicht mehr verfügbar.</MudText>
+                <MudText Typo="Typo.caption" Class="mt-2">Debug: CreatorId = "@CreatorId", CreatorName = "@CreatorName"</MudText>
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <MudText Typo="Typo.caption">Error: @_errorMessage</MudText>
+                }
+                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/" Class="mt-2">Zur Startseite</MudButton>
+            </MudAlert>
+        </MudContainer>
+    }
+    else
+    {
+        <!-- Hero Section mit Banner -->
+        <MudPaper Elevation="0" Class="creator-hero" Style="@GetBannerStyle()">
+            <div class="hero-overlay">
+                <MudContainer MaxWidth="MaxWidth.Large" Class="py-8">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="4">
+                        <!-- Avatar -->
+                        <MudBadge Color="@(_creator.VerifiedCreator ? Color.Success : Color.Default)" 
+                                  Icon="@(_creator.VerifiedCreator ? Icons.Material.Filled.Verified : null)"
+                                  Overlap="true" Bordered="true" BadgeClass="creator-badge">
+                            <MudAvatar Size="Size.Large" Style="width: 150px; height: 150px; border: 4px solid white;">
+                                @if (!string.IsNullOrEmpty(_creator.AvatarUrl))
+                                {
+                                    <MudImage Src="@_creator.AvatarUrl" Alt="@_creator.DisplayName" />
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" />
+                                }
+                            </MudAvatar>
+                        </MudBadge>
+                        
+                        <!-- Name & Verified Badge -->
+                        <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                            <MudText Typo="Typo.h3" Style="color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">
+                                @(_creator.CreatorName ?? _creator.DisplayName)
+                            </MudText>
+                            @if (_creator.VerifiedCreator)
+                            {
+                                <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.Verified">
+                                    Verifizierter Creator
+                                </MudChip>
+                            }
+                        </MudStack>
+                        
+                        <!-- Bio -->
+                        @if (!string.IsNullOrEmpty(_creator.Bio))
+                        {
+                            <MudText Typo="Typo.body1" Align="Align.Center" Style="color: white; max-width: 600px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+                                @_creator.Bio
+                            </MudText>
+                        }
+                        
+                        <!-- Stats -->
+                        <MudStack Row="true" Spacing="4" Class="mt-2">
+                            <MudStack AlignItems="AlignItems.Center" Spacing="0">
+                                <MudText Typo="Typo.h4" Style="color: white;">@_creator.FollowerCount</MudText>
+                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">Follower</MudText>
+                            </MudStack>
+                            <MudDivider Vertical="true" FlexItem="true" Style="background: rgba(255,255,255,0.3);" />
+                            <MudStack AlignItems="AlignItems.Center" Spacing="0">
+                                <MudText Typo="Typo.h4" Style="color: white;">@_products.Count</MudText>
+                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">Produkte</MudText>
+                            </MudStack>
+                            <MudDivider Vertical="true" FlexItem="true" Style="background: rgba(255,255,255,0.3);" />
+                            <MudStack AlignItems="AlignItems.Center" Spacing="0">
+                                <MudText Typo="Typo.h4" Style="color: white;">@_creator.TotalRaffles</MudText>
+                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">Raffles</MudText>
+                            </MudStack>
+                        </MudStack>
+                        
+                        <!-- Social Links -->
+                        <MudStack Row="true" Spacing="2" Class="mt-3">
+                            @if (!string.IsNullOrEmpty(_creator.YouTubeUrl))
+                            {
+                                <MudIconButton Icon="@Icons.Custom.Brands.YouTube" Color="Color.Error" Size="Size.Large" 
+                                              Href="@_creator.YouTubeUrl" Target="_blank" />
+                            }
+                            @if (!string.IsNullOrEmpty(_creator.TwitchUrl))
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Videocam" Color="Color.Secondary" Size="Size.Large" 
+                                              Href="@_creator.TwitchUrl" Target="_blank" Title="Twitch" />
+                            }
+                            @if (!string.IsNullOrEmpty(_creator.TwitterUrl))
+                            {
+                                <MudIconButton Icon="@Icons.Custom.Brands.Twitter" Color="Color.Info" Size="Size.Large" 
+                                              Href="@_creator.TwitterUrl" Target="_blank" />
+                            }
+                            @if (!string.IsNullOrEmpty(_creator.InstagramUrl))
+                            {
+                                <MudIconButton Icon="@Icons.Custom.Brands.Instagram" Color="Color.Error" Size="Size.Large" 
+                                              Href="@_creator.InstagramUrl" Target="_blank" />
+                            }
+                            @if (!string.IsNullOrEmpty(_creator.TikTokUrl))
+                            {
+                                <MudIconButton Icon="@Icons.Custom.Brands.TikTok" Style="color: white;" Size="Size.Large" 
+                                              Href="@_creator.TikTokUrl" Target="_blank" />
+                            }
+                            @if (!string.IsNullOrEmpty(_creator.DiscordUrl))
+                            {
+                                <MudIconButton Icon="@Icons.Custom.Brands.Discord" Color="Color.Primary" Size="Size.Large" 
+                                              Href="@_creator.DiscordUrl" Target="_blank" />
+                            }
+                        </MudStack>
+                        
+                        <!-- Follow Button -->
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" 
+                                  StartIcon="@Icons.Material.Filled.PersonAdd" Class="mt-2">
+                            Folgen
+                        </MudButton>
+                    </MudStack>
+                </MudContainer>
+            </div>
+        </MudPaper>
+        
+        <!-- Content Sections -->
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+            
+            <!-- Aktive Raffles -->
+            @if (_activeRaffles.Count > 0)
+            {
+                <MudPaper Elevation="2" Class="pa-6 mb-6 rounded-lg">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Warning" Size="Size.Large" />
+                        <MudText Typo="Typo.h5">Aktive Gewinnspiele</MudText>
+                        <MudSpacer />
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small">@_activeRaffles.Count aktiv</MudChip>
+                    </MudStack>
+                    
+                    <MudGrid>
+                        @foreach (var raffle in _activeRaffles.Take(3))
+                        {
+                            <MudItem xs="12" md="4">
+                                <MudCard Elevation="3" Class="raffle-card">
+                                    <MudCardHeader>
+                                        <CardHeaderContent>
+                                            <MudText Typo="Typo.h6">@raffle.Title</MudText>
+                                        </CardHeaderContent>
+                                        <CardHeaderActions>
+                                            <MudChip T="string" Color="Color.Success" Size="Size.Small">Aktiv</MudChip>
+                                        </CardHeaderActions>
+                                    </MudCardHeader>
+                                    <MudCardContent>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@raffle.PrizeDescription</MudText>
+                                        <MudStack Row="true" Class="mt-3" Justify="Justify.SpaceBetween">
+                                            <MudStack Spacing="0">
+                                                <MudText Typo="Typo.caption">Preiswert</MudText>
+                                                <MudText Typo="Typo.h6" Color="Color.Primary">€@raffle.PrizeValue.ToString("F2")</MudText>
+                                            </MudStack>
+                                            <MudStack Spacing="0" AlignItems="AlignItems.End">
+                                                <MudText Typo="Typo.caption">Endet am</MudText>
+                                                <MudText Typo="Typo.body2">@(raffle.EndDate?.ToString("dd.MM.yyyy") ?? "-")</MudText>
+                                            </MudStack>
+                                        </MudStack>
+                                        <MudProgressLinear Value="@GetRaffleProgress(raffle)" Color="Color.Secondary" Class="mt-3" />
+                                        <MudText Typo="Typo.caption" Align="Align.Center">@raffle.CurrentEntries / @raffle.MaxEntries Teilnahmen</MudText>
+                                    </MudCardContent>
+                                    <MudCardActions>
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true">
+                                            Teilnehmen
+                                        </MudButton>
+                                    </MudCardActions>
+                                </MudCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudPaper>
+            }
+            
+            <!-- Produkte -->
+            @if (_products.Count > 0)
+            {
+                <MudPaper Elevation="2" Class="pa-6 mb-6 rounded-lg">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Store" Color="Color.Primary" Size="Size.Large" />
+                        <MudText Typo="Typo.h5">Shop</MudText>
+                        <MudSpacer />
+                        <MudButton Variant="Variant.Text" EndIcon="@Icons.Material.Filled.ArrowForward" 
+                                  Href="@($"/shop/{CreatorId}")">
+                            Alle Produkte
+                        </MudButton>
+                    </MudStack>
+                    
+                    <MudGrid>
+                        @foreach (var product in _products.Take(6))
+                        {
+                            <MudItem xs="12" sm="6" md="4">
+                                <MudCard Elevation="2" Class="product-card" @onclick="@(() => Navigation.NavigateTo($"/shop/{CreatorId}/product/{product.Id}"))">
+                                    <MudCardMedia Image="@(product.ThumbnailUrl ?? "https://via.placeholder.com/300x200?text=Produkt")" Height="180" />
+                                    <MudCardContent>
+                                        <MudStack Spacing="1">
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@product.ProductTypeDisplay</MudChip>
+                                            <MudText Typo="Typo.subtitle1" Style="font-weight: bold;">@product.Title</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="product-description">
+                                                @(product.Description?.Length > 60 ? product.Description.Substring(0, 60) + "..." : product.Description)
+                                            </MudText>
+                                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                                @if (product.OriginalPrice.HasValue && product.OriginalPrice > product.Price)
+                                                {
+                                                    <MudText Typo="Typo.body2" Style="text-decoration: line-through;" Color="Color.Secondary">
+                                                        €@product.OriginalPrice.Value.ToString("F2")
+                                                    </MudText>
+                                                }
+                                                <MudText Typo="Typo.h6" Color="Color.Primary">€@product.Price.ToString("F2")</MudText>
+                                            </MudStack>
+                                        </MudStack>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudPaper>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-6">
+                    Dieser Creator hat noch keine Produkte in seinem Shop.
+                </MudAlert>
+            }
+            
+            <!-- Collaboration Info -->
+            @if (_creator.AcceptingCollaborations)
+            {
+                <MudPaper Elevation="2" Class="pa-6 rounded-lg" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                        <MudIcon Icon="@Icons.Material.Filled.Handshake" Size="Size.Large" Style="color: white;" />
+                        <MudText Typo="Typo.h5" Style="color: white;">Offen für Kooperationen!</MudText>
+                        @if (!string.IsNullOrEmpty(_creator.CollaborationInfo))
+                        {
+                            <MudText Typo="Typo.body1" Align="Align.Center" Style="color: rgba(255,255,255,0.9); max-width: 600px;">
+                                @_creator.CollaborationInfo
+                            </MudText>
+                        }
+                        <MudButton Variant="Variant.Filled" Color="Color.Default" Size="Size.Large"
+                                  StartIcon="@Icons.Material.Filled.Email">
+                            Kontakt aufnehmen
+                        </MudButton>
+                    </MudStack>
+                </MudPaper>
+            }
+        </MudContainer>
+    }
+</MudContainer>
+
+<style>
+    .creator-hero {
+        min-height: 450px;
+        background-size: cover;
+        background-position: center;
+        position: relative;
+    }
+    
+    .hero-overlay {
+        background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%);
+        min-height: 450px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .creator-badge {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .product-card {
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .product-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .product-description {
+        min-height: 40px;
+    }
+    
+    .raffle-card {
+        height: 100%;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string? CreatorId { get; set; }
+    
+    [Parameter]
+    public string? CreatorName { get; set; }
+
+    private CreatorProfileDto? _creator;
+    private List<ShopProduct> _products = new();
+    private List<Raffle> _activeRaffles = new();
+    private bool _isLoading = true;
+    private string? _errorMessage;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadCreatorData();
+    }
+
+    private async Task LoadCreatorData()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            Console.WriteLine($"[CreatorLandingPage] Loading creator data - CreatorId: {CreatorId}, CreatorName: {CreatorName}");
+
+            // Load creator profile
+            if (!string.IsNullOrEmpty(CreatorId))
+            {
+                _creator = await CreatorService.GetCreatorProfileAsync(CreatorId);
+                Console.WriteLine($"[CreatorLandingPage] GetCreatorProfileAsync result: {(_creator != null ? "Found" : "Not found")}");
+            }
+            else if (!string.IsNullOrEmpty(CreatorName))
+            {
+                _creator = await CreatorService.GetCreatorByNameAsync(CreatorName);
+                Console.WriteLine($"[CreatorLandingPage] GetCreatorByNameAsync result: {(_creator != null ? "Found" : "Not found")}");
+            }
+            else
+            {
+                _errorMessage = "Keine CreatorId oder CreatorName angegeben";
+                Console.WriteLine("[CreatorLandingPage] No CreatorId or CreatorName provided");
+            }
+
+            if (_creator != null)
+            {
+                Console.WriteLine($"[CreatorLandingPage] Creator found: {_creator.DisplayName} (Id: {_creator.Id})");
+
+                // Load products
+                _products = await ProductService.GetCreatorProductsAsync(_creator.Id);
+                _products = _products.Where(p => p.Status == ProductStatus.Active).ToList();
+
+                // Load active raffles
+                var allRaffles = await RaffleService.GetCreatorRafflesAsync();
+                _activeRaffles = allRaffles ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+            Console.WriteLine($"[CreatorLandingPage] Error: {ex.Message}");
+            Snackbar.Add($"Fehler beim Laden: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private string GetBannerStyle()
+    {
+        if (!string.IsNullOrEmpty(_creator?.BannerUrl))
+        {
+            return $"background-image: url('{_creator.BannerUrl}');";
+        }
+        return "background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);";
+    }
+
+    private double GetRaffleProgress(Raffle raffle)
+    {
+        if (raffle.MaxEntries <= 0) return 0;
+        return (double)raffle.CurrentEntries / raffle.MaxEntries * 100;
+    }
+}

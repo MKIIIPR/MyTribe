@@ -93,9 +93,30 @@
             var user = await SignInManager.UserManager.FindByEmailAsync(Input.Email);
             if (user != null)
             {
-                // 2. TribeUser laden
+                // 2. TribeUser laden oder erstellen falls nicht vorhanden
                 var tribeUser = await Context.TribeUsers
                     .FirstOrDefaultAsync(t => t.ApplicationUserId == user.Id);
+
+                // Falls kein TribeUser existiert, automatisch erstellen
+                if (tribeUser == null)
+                {
+                    var displayName = GetDisplayNameFromEmail(Input.Email);
+                    tribeUser = new TribeUser
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        ApplicationUserId = user.Id,
+                        DisplayName = displayName,
+                        ProfileType = Constants.ProfileTypes.Regular,
+                        IsCreator = false,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    Context.TribeUsers.Add(tribeUser);
+                    await Context.SaveChangesAsync();
+
+                    Logger.LogInformation("TribeUser profile auto-created during login for user {UserId}", user.Id);
+                }
 
                 // 3. JWT mit profileId generieren
                 var token = JwtTokenService.GenerateToken(tribeUser);
@@ -149,5 +170,21 @@
 
         [Display(Name = "Remember me?")]
         public bool RememberMe { get; set; }
+    }
+
+    /// <summary>
+    /// Extrahiert den DisplayName aus der Email-Adresse (Teil vor dem @)
+    /// </summary>
+    private static string GetDisplayNameFromEmail(string email)
+    {
+        if (string.IsNullOrEmpty(email))
+            return "User";
+
+        var atIndex = email.IndexOf('@');
+        if (atIndex > 0)
+        {
+            return email.Substring(0, atIndex);
+        }
+        return email;
     }
 }

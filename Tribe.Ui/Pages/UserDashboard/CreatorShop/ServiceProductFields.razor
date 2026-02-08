@@ -1,0 +1,74 @@
+@using MudBlazor
+@using static Tribe.Bib.ShopRelated.ShopStruckture
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudText Typo="Typo.h6" Class="mb-3">Dienstleistung - Details</MudText>
+    </MudItem>
+    
+    <MudItem xs="12" md="4">
+        <MudNumericField T="int" @bind-Value="Product.DurationMinutes" Label="Dauer (Minuten)" Min="1" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudSelect T="string" @bind-Value="Product.ServiceType" Label="Art der Dienstleistung" Variant="Variant.Outlined">
+            <MudSelectItem Value="@("consultation")">Beratung</MudSelectItem>
+            <MudSelectItem Value="@("coaching")">Coaching</MudSelectItem>
+            <MudSelectItem Value="@("design")">Design</MudSelectItem>
+            <MudSelectItem Value="@("development")">Entwicklung</MudSelectItem>
+            <MudSelectItem Value="@("other")">Sonstiges</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudSelect T="string" @bind-Value="Product.MeetingType" Label="Meeting-Art" Variant="Variant.Outlined">
+            <MudSelectItem Value="@("online")">Online</MudSelectItem>
+            <MudSelectItem Value="@("in_person")">Vor Ort</MudSelectItem>
+            <MudSelectItem Value="@("phone")">Telefon</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudCheckBox @bind-Value="Product.RequiresBooking" Label="Terminbuchung erforderlich" Color="Color.Primary" />
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.subtitle1">Buchungseinstellungen</MudText>
+    </MudItem>
+    
+    <MudItem xs="12" md="4">
+        <MudNumericField T="int" @bind-Value="Product.MaxBookingsPerDay" Label="Max. Buchungen/Tag" Min="1" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudNumericField T="int" @bind-Value="Product.MinAdvanceBookingHours" Label="Min. Vorlauf (Stunden)" Min="0" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudNumericField T="int" @bind-Value="Product.MaxAdvanceBookingDays" Label="Max. Vorlauf (Tage)" Min="1" Variant="Variant.Outlined" />
+    </MudItem>
+    
+    <MudItem xs="12" md="6">
+        <MudCheckBox @bind-Value="Product.AllowRescheduling" Label="Umbuchung erlauben" Color="Color.Primary" />
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <MudNumericField T="int" @bind-Value="Product.RescheduleHoursLimit" Label="Umbuchung bis (Stunden vorher)" Min="0" Variant="Variant.Outlined" Disabled="!Product.AllowRescheduling" />
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.subtitle1">Meeting-Details</MudText>
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudTextField @bind-Value="Product.MeetingUrl" Label="Meeting URL (Zoom, Teams, etc.)" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12">
+        <MudTextField @bind-Value="Product.MeetingLocation" Label="Ort (falls vor Ort)" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12">
+        <MudTextField @bind-Value="Product.MeetingInstructions" Label="Anweisungen für Teilnehmer" Variant="Variant.Outlined" Lines="2" />
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter]
+    public ServiceProduct Product { get; set; } = new();
+}

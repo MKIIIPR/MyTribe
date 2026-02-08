@@ -13,6 +13,7 @@ namespace Tribe.Services.ClientServices.ShopServices
         Task<List<ShopProduct>> GetCreatorProductsAsync(string creatorId);
         Task<ShopProduct?> GetProductByIdAsync(string productId);
         Task<ShopProduct?> CreateProductAsync<T>(T product) where T : ShopProduct;
+        Task<ShopProduct?> CreateProductAsync(ProductDto dto);
         Task<bool> UpdateProductAsync(string productId, ProductDto dto);
         Task<bool> DeleteProductAsync(string productId);
     }
@@ -127,6 +128,20 @@ namespace Tribe.Services.ClientServices.ShopServices
         public async Task<ShopProduct?> CreateProductAsync<T>(T product) where T : ShopProduct
         {
             return await _apiService.PostAsync<T, ShopProduct>(ProductsEndpoint, product);
+        }
+
+        public async Task<ShopProduct?> CreateProductAsync(ProductDto dto)
+        {
+            try
+            {
+                var result = await _apiService.PostAsync<ProductDto, ShopProduct>(ProductsEndpoint, dto);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "CreateProductAsync(dto) failed");
+                return null;
+            }
         }
 
         public async Task<bool> UpdateProductAsync(string productId, ProductDto dto)

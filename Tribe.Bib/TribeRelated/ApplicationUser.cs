@@ -134,25 +134,25 @@
         [ForeignKey(nameof(TribeProfile))]
         public string TribeProfileId { get; set; } = string.Empty;
 
-        // Verweis auf CreatorPlan
+        // Verweis auf CreatorPlan (nullable für Trial)
         [ForeignKey(nameof(CreatorPlan))]
-        public string CreatorPlanId { get; set; } = string.Empty;
+        public string? CreatorPlanId { get; set; }
 
-        // Verweis auf das spezifische Pricing
+        // Verweis auf das spezifische Pricing (nullable für Trial)
         [ForeignKey(nameof(CreatorPlanPricing))]
-        public string CreatorPlanPricingId { get; set; } = string.Empty;
+        public string? CreatorPlanPricingId { get; set; }
         public string Currency { get; set; } = "USD"; // USD, EUR, GBP
         [Column(TypeName = "decimal(18, 2)")]
         public double SubValue { get; set; }
         // Subscription Details
         public DateTime StartDate { get; set; } = DateTime.UtcNow;
         public DateTime? EndDate { get; set; } // null = aktiv
-        public string Duration { get; set; } = "Monthly"; // Monthly, Annual    
+        public string Duration { get; set; } = "Monthly"; // Monthly, Annual, Trial
         public bool IsActive { get; set; } = true;
         public bool IsPaid { get; set; } = false;
 
         // Payment Details
-        public string PaymentStatus { get; set; } = "Pending"; // Pending, Paid, Failed, Cancelled
+        public string PaymentStatus { get; set; } = "Pending"; // Pending, Paid, Failed, Cancelled, Trial
         public string? PaymentMethod { get; set; }
         public string? TransactionId { get; set; }
         public DateTime? LastPaymentDate { get; set; }
@@ -163,13 +163,16 @@
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-        // Navigation Properties
-        public virtual TribeUser TribeProfile { get; set; } = null!;
-        public virtual CreatorPlan CreatorPlan { get; set; } = null!;
-        public virtual CreatorPlanPricing CreatorPlanPricing { get; set; } = null!;
-     
+        // Navigation Properties (nullable für Trial-Subscriptions)
+        public virtual TribeUser? TribeProfile { get; set; }
+        public virtual CreatorPlan? CreatorPlan { get; set; }
+        public virtual CreatorPlanPricing? CreatorPlanPricing { get; set; }
+
         public BillingAddress BillingAddress { get; set; } = new();
         public PaymentInfo PaymentInfo { get; set; } = new();
+
+        // Helper property
+        public bool IsTrial => Duration == "Trial" || PaymentStatus == "Trial";
     }
 
     // 5. CreatorProfile - Erweiterte Creator-Daten

@@ -59,12 +59,15 @@ window.addEventListener('scroll', function () {
     const content = document.getElementById('content');
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
 
-    if (scrollTop > 100) {
-        shrinkingDiv.classList.add('scrolled');
-        content.classList.add('scrolled');
-    } else {
-        shrinkingDiv.classList.remove('scrolled');
-        content.classList.remove('scrolled');
+    // Null-Check hinzufügen um Fehler zu vermeiden wenn Elemente nicht existieren
+    if (shrinkingDiv && content) {
+        if (scrollTop > 100) {
+            shrinkingDiv.classList.add('scrolled');
+            content.classList.add('scrolled');
+        } else {
+            shrinkingDiv.classList.remove('scrolled');
+            content.classList.remove('scrolled');
+        }
     }
 });
 /*-----Scroll Cards-----*/

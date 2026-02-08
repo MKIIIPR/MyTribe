@@ -1,0 +1,12 @@
+@page "/creator/{CreatorId}"
+@page "/c/{CreatorName}"
+
+<Tribe.Ui.Pages.Creator.CreatorLandingPage CreatorId="@CreatorId" CreatorName="@CreatorName" />
+
+@code {
+    [Parameter]
+    public string? CreatorId { get; set; }
+    
+    [Parameter]
+    public string? CreatorName { get; set; }
+}

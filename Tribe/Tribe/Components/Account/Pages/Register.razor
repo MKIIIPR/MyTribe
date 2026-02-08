@@ -6,6 +6,7 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 @using Tribe.Data
+@using Tribe.Bib.Models.TribeRelated
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
@@ -14,6 +15,7 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject ApplicationDbContext DbContext
 
 <PageTitle>Register</PageTitle>
 
@@ -84,6 +86,34 @@
         Logger.LogInformation("User created a new account with password.");
 
         var userId = await UserManager.GetUserIdAsync(user);
+
+        // === TribeUser Profil automatisch erstellen ===
+        try
+        {
+            var displayName = GetDisplayNameFromEmail(Input.Email);
+            var tribeUser = new TribeUser
+            {
+                Id = Guid.NewGuid().ToString(),
+                ApplicationUserId = userId,
+                DisplayName = displayName,
+                ProfileType = Constants.ProfileTypes.Regular,
+                IsCreator = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            DbContext.TribeUsers.Add(tribeUser);
+            await DbContext.SaveChangesAsync();
+
+            Logger.LogInformation("TribeUser profile created for user {UserId} with DisplayName {DisplayName}", userId, displayName);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to create TribeUser profile for user {UserId}", userId);
+            // Don't block registration if TribeUser creation fails
+        }
+        // === Ende TribeUser Erstellung ===
+
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
@@ -98,9 +128,11 @@
                 "Account/RegisterConfirmation",
                 new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
         }
-
-        await SignInManager.SignInAsync(user, isPersistent: false);
-        RedirectManager.RedirectTo(ReturnUrl);
+        else
+        {
+            await SignInManager.SignInAsync(user, isPersistent: false);
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
     }
 
     private static ApplicationUser CreateUser()
@@ -123,6 +155,22 @@
             throw new NotSupportedException("The default UI requires a user store with email support.");
         }
         return (IUserEmailStore<ApplicationUser>)UserStore;
+    }
+
+    /// <summary>
+    /// Extrahiert den DisplayName aus der Email-Adresse (Teil vor dem @)
+    /// </summary>
+    private static string GetDisplayNameFromEmail(string email)
+    {
+        if (string.IsNullOrEmpty(email))
+            return "User";
+
+        var atIndex = email.IndexOf('@');
+        if (atIndex > 0)
+        {
+            return email.Substring(0, atIndex);
+        }
+        return email;
     }
 
     private sealed class InputModel

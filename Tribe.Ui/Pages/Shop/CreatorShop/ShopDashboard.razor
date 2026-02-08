@@ -1,16 +1,21 @@
 @using MudBlazor
 @using Tribe.Bib.ShopRelated
+@using Tribe.Ui.Pages.UserDashboard.CreatorShop
 @using static Tribe.Bib.ShopRelated.ShopStruckture
 
 <MudTabs Outlined="true" Position="Position.Start" Rounded="true" Border="true"
     ApplyEffectsToContainer="true" Class="mt-8" PanelClass="pa-6">
     
+    <MudTabPanel Text="Übersicht" Icon="@Icons.Material.Filled.Dashboard">
+        <Tribe.Ui.Pages.Shop.CreatorShop.ShopDashboardOverview></Tribe.Ui.Pages.Shop.CreatorShop.ShopDashboardOverview>
+    </MudTabPanel>
+    
     <MudTabPanel Text="Produkte" Icon="@Icons.Material.Filled.ShoppingCart">
-        <Tribe.Ui.Pages.CreatorShop.ProductsList></Tribe.Ui.Pages.CreatorShop.ProductsList>
+        <ProductsList></ProductsList>
     </MudTabPanel>
     
     <MudTabPanel Text="Kategorien" Icon="@Icons.Material.Filled.Category">
-        <Tribe.Ui.Pages.CreatorShop.Categories></Tribe.Ui.Pages.CreatorShop.Categories>
+        <Categories></Categories>
     </MudTabPanel>
     
     <MudTabPanel Text="Raffles" Icon="@Icons.Material.Filled.EmojiEvents">
@@ -18,7 +23,7 @@
     </MudTabPanel>
     
     <MudTabPanel Text="Bestellungen" Icon="@Icons.Material.Filled.Receipt">
-        <Tribe.Ui.Pages.CreatorShop.Orders></Tribe.Ui.Pages.CreatorShop.Orders>
+        <Orders></Orders>
     </MudTabPanel>
     
     <MudTabPanel Text="Bewertungen" Icon="@Icons.Material.Filled.RateReview">
@@ -30,47 +35,6 @@
         <MudAlert Severity="Severity.Info" Class="mt-3">
             Reviews Management wird in Kürze implementiert
         </MudAlert>
-    </MudTabPanel>
-    
-    <MudTabPanel Text="Shop Statistiken" Icon="@Icons.Material.Filled.BarChart">
-        <MudText Typo="Typo.h6">Verkaufsstatistiken</MudText>
-        <MudGrid Class="mt-4">
-            <MudItem xs="12" md="3">
-                <MudCard>
-                    <MudCardContent>
-                        <MudText Typo="Typo.subtitle2">Gesamtumsatz</MudText>
-                        <MudText Typo="Typo.h4" Color="Color.Primary">€ 0,00</MudText>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-            
-            <MudItem xs="12" md="3">
-                <MudCard>
-                    <MudCardContent>
-                        <MudText Typo="Typo.subtitle2">Bestellungen</MudText>
-                        <MudText Typo="Typo.h4" Color="Color.Success">0</MudText>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-            
-            <MudItem xs="12" md="3">
-                <MudCard>
-                    <MudCardContent>
-                        <MudText Typo="Typo.subtitle2">Produkte</MudText>
-                        <MudText Typo="Typo.h4" Color="Color.Info">0</MudText>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-            
-            <MudItem xs="12" md="3">
-                <MudCard>
-                    <MudCardContent>
-                        <MudText Typo="Typo.subtitle2">Ø Bewertung</MudText>
-                        <MudText Typo="Typo.h4" Color="Color.Warning">0 ?</MudText>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-        </MudGrid>
     </MudTabPanel>
     
 </MudTabs>

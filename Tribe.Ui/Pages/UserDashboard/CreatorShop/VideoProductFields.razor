@@ -1,0 +1,64 @@
+@using MudBlazor
+@using static Tribe.Bib.ShopRelated.ShopStruckture
+
+<MudGrid>
+    <MudItem xs="12">
+        <MudText Typo="Typo.h6" Class="mb-3">Video-Produkt - Details</MudText>
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudTextField @bind-Value="Product.VideoUrl" Label="Video URL *" Variant="Variant.Outlined" Placeholder="https://..." HelperText="Link zum Video (nach Kauf sichtbar)" />
+    </MudItem>
+    <MudItem xs="12">
+        <MudTextField @bind-Value="Product.PreviewVideoUrl" Label="Vorschau-Video URL" Variant="Variant.Outlined" Placeholder="https://..." HelperText="Kurzer Trailer (öffentlich sichtbar)" />
+    </MudItem>
+    
+    <MudItem xs="12" md="4">
+        <MudNumericField T="int" @bind-Value="Product.DurationSeconds" Label="Länge (Sekunden)" Min="0" Variant="Variant.Outlined" />
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudSelect T="string" @bind-Value="Product.VideoQuality" Label="Qualität" Variant="Variant.Outlined">
+            <MudSelectItem Value="@("720p")">720p HD</MudSelectItem>
+            <MudSelectItem Value="@("1080p")">1080p Full HD</MudSelectItem>
+            <MudSelectItem Value="@("4K")">4K Ultra HD</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudSelect T="string" @bind-Value="Product.VideoFormat" Label="Format" Variant="Variant.Outlined">
+            <MudSelectItem Value="@("mp4")">MP4</MudSelectItem>
+            <MudSelectItem Value="@("mov")">MOV</MudSelectItem>
+            <MudSelectItem Value="@("avi")">AVI</MudSelectItem>
+            <MudSelectItem Value="@("mkv")">MKV</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.subtitle1">Download-Einstellungen</MudText>
+    </MudItem>
+    
+    <MudItem xs="12" md="6">
+        <MudCheckBox @bind-Value="Product.AllowDownload" Label="Download erlauben" Color="Color.Primary" />
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <MudNumericField T="int" @bind-Value="Product.MaxDownloads" Label="Max. Downloads" Min="1" Variant="Variant.Outlined" Disabled="!Product.AllowDownload" />
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudTextField @bind-Value="Product.DownloadUrl" Label="Download URL" Variant="Variant.Outlined" Disabled="!Product.AllowDownload" />
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.subtitle1">Untertitel</MudText>
+    </MudItem>
+    
+    <MudItem xs="12">
+        <MudCheckBox @bind-Value="Product.HasSubtitles" Label="Hat Untertitel" Color="Color.Primary" />
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter]
+    public VideoProduct Product { get; set; } = new();
+}

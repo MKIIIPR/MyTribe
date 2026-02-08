@@ -37,6 +37,7 @@ namespace Tribe.Data
         public DbSet<ProfileFollow> ProfileFollows { get; set; }
         public DbSet<CreatorPlan> CreatorPlans { get; set; }
         public DbSet<CreatorPlanPricing> CreatorPlanPricings{ get; set; }
+        public DbSet<CreatorSubscription> CreatorSubscriptions { get; set; }
         public DbSet<CreatorToken> CreatorTokens { get; set; }
         public DbSet<ProfileTokenHolding> ProfileTokenHoldings { get; set; }
         public DbSet<AffiliatePartner> AffiliatePartner { get; set; }

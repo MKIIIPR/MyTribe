@@ -12,7 +12,8 @@ namespace Tribe.Services.ClientServices.SimpleAuth
         private readonly IJSRuntime _jsRuntime;
         private readonly ISignalRService _signalRService;
         private readonly ILogger<CookieAuthenticationStateProvider> _logger;
-        private AuthenticationState? _lastKnownState;
+        private AuthenticationState? _cachedState;
+        private string? _cachedToken;
 
         public CookieAuthenticationStateProvider(
             IJSRuntime jsRuntime,
@@ -32,26 +33,27 @@ namespace Tribe.Services.ClientServices.SimpleAuth
 
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
-            _logger.LogDebug("Getting authentication state");
-
             try
             {
                 var token = await GetCookieTokenAsync();
 
+                // Wenn Token gleich wie gecachtes Token, cached state zurückgeben
+                if (_cachedState != null && _cachedToken == token && !string.IsNullOrEmpty(token))
+                {
+                    _logger.LogDebug("Returning cached authentication state (same token)");
+                    return _cachedState;
+                }
+
                 if (string.IsNullOrEmpty(token))
                 {
                     _logger.LogDebug("No token found - returning anonymous state");
-                    var anonymousState = CreateAnonymousState();
-                    _lastKnownState = anonymousState;
-                    return anonymousState;
+                    return CacheAndReturn(CreateAnonymousState(), null);
                 }
 
                 if (IsTokenExpired(token))
                 {
                     _logger.LogWarning("Token is expired - returning anonymous state");
-                    var expiredState = CreateAnonymousState();
-                    _lastKnownState = expiredState;
-                    return expiredState;
+                    return CacheAndReturn(CreateAnonymousState(), null);
                 }
 
                 var claims = ParseClaimsFromJwt(token);
@@ -61,23 +63,20 @@ namespace Tribe.Services.ClientServices.SimpleAuth
                 var userName = identity.Name ?? "Unknown";
                 _logger.LogDebug("User authenticated: {UserName}", userName);
 
-                // Track state changes
-                if (_lastKnownState?.User?.Identity?.IsAuthenticated != authenticatedState.User.Identity.IsAuthenticated)
-                {
-                    _logger.LogInformation("AUTH_STATE_CHANGE: User={UserName}, Authenticated={IsAuthenticated}",
-                        userName, authenticatedState.User.Identity.IsAuthenticated);
-                }
-
-                _lastKnownState = authenticatedState;
-                return authenticatedState;
+                return CacheAndReturn(authenticatedState, token);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting authentication state");
-                var errorState = CreateAnonymousState();
-                _lastKnownState = errorState;
-                return errorState;
+                return CacheAndReturn(CreateAnonymousState(), null);
             }
+        }
+
+        private AuthenticationState CacheAndReturn(AuthenticationState state, string? token)
+        {
+            _cachedState = state;
+            _cachedToken = token;
+            return state;
         }
 
         private async Task<string?> GetCookieTokenAsync()
@@ -103,6 +102,9 @@ namespace Tribe.Services.ClientServices.SimpleAuth
 
             try
             {
+                // Clear cache to force fresh state
+                _cachedState = null;
+                _cachedToken = null;
                 RefreshAuthState();
                 _logger.LogDebug("Auth state refreshed after login event");
             }
@@ -118,6 +120,10 @@ namespace Tribe.Services.ClientServices.SimpleAuth
 
             try
             {
+                // Clear cache
+                _cachedState = null;
+                _cachedToken = null;
+
                 // Cookie löschen
                 _jsRuntime.InvokeVoidAsync("eval",
                     "document.cookie = 'jwt_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict'");
@@ -143,6 +149,8 @@ namespace Tribe.Services.ClientServices.SimpleAuth
         public Task NotifyAuthStateChangedAsync()
         {
             _logger.LogInformation("NotifyAuthStateChangedAsync called - refreshing auth state");
+            _cachedState = null;
+            _cachedToken = null;
             RefreshAuthState();
             return Task.CompletedTask;
         }

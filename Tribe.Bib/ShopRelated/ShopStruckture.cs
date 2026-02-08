@@ -199,7 +199,7 @@ namespace Tribe.Bib.ShopRelated
             public int SoldTickets { get; set; } = 0;
 
             // Ticket details
-            public string TicketType { get; set; } = "general"; // general, vip, early_bird
+            public string TicketType { get; set; } = "standard"; // standard, vip, early_bird, group
             public bool IncludesFood { get; set; } = false;
             public bool IncludesDrinks { get; set; } = false;
             public List<string> Includes { get; set; } = new();
@@ -211,6 +211,11 @@ namespace Tribe.Bib.ShopRelated
             public int MinAge { get; set; } = 0;
             public bool RefundableUntil { get; set; } = true;
             public DateTime? RefundDeadline { get; set; }
+
+            // Online Event
+            public bool IsOnlineEvent { get; set; } = false;
+            public string? StreamUrl { get; set; }
+            public bool RequiresIdentification { get; set; } = false;
 
             public int RemainingTickets => MaxTickets - SoldTickets;
             public bool IsSoldOut => RemainingTickets <= 0;
