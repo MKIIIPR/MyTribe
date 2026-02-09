@@ -54,7 +54,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         sqlOptions.EnableRetryOnFailure(3);
         sqlOptions.CommandTimeout(30);
     }));
-
+var orgaConnectionString = builder.Configuration.GetConnectionString("OrgaDbContextConnection")
+    ?? throw new InvalidOperationException("Connection string 'OrgaDbContextConnection' not found.");
+builder.Services.AddDbContext<OrgaDbContext>(options =>
+    options.UseSqlServer(orgaConnectionString, sqlOptions =>
+    {
+        sqlOptions.EnableRetryOnFailure(3);
+        sqlOptions.CommandTimeout(30);
+    }));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 #endregion
 
