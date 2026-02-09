@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MudBlazor.Services;
@@ -22,15 +23,21 @@ using Tribe.Services.ClientServices.SimpleAuth;
 using Tribe.Services.Hubs;
 using Tribe.Services.ServerServices;
 using Tribe.Services.States;
+using Tribe.Data.Seeds;
 
 using TribeApp.Repositories;
+// using Tribe.SummeryServices; (removed)
 
 var builder = WebApplication.CreateBuilder(args);
 
 #region Database Configuration
 builder.Services.AddDbContext<ShopDbContext>(options =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("ShopDbConnection"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("ShopDbConnection"), sqlOptions =>
+    {
+        sqlOptions.EnableRetryOnFailure(3);
+        sqlOptions.CommandTimeout(30);
+    });
 
     if (builder.Environment.IsDevelopment())
     {
@@ -47,6 +54,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         sqlOptions.EnableRetryOnFailure(3);
         sqlOptions.CommandTimeout(30);
     }));
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 #endregion
 
@@ -166,6 +174,9 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 #region SignalR
 builder.Services.AddSignalR();
+#region Organization Authorization
+// Organization authorization handler removed
+#endregion
 #endregion
 
 #region Swagger/OpenAPI
@@ -199,10 +210,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 #endregion
-
 var app = builder.Build();
-
-#region Middleware Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseWebAssemblyDebugging();
@@ -238,6 +246,11 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 app.MapControllers();
 app.MapHub<AuthHub>("/authHub");
-#endregion
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<OrgaDbContext>();
+    await GameProfileSeed.EnsureSeedAsync(dbContext);
+}
 
 app.Run();

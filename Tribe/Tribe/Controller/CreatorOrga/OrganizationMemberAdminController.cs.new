@@ -1,0 +1,57 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
+using System.Security.Claims;
+using Tribe.Services.Interfaces;
+using Tribe.Bib.Models.CommunityManagement;
+using Tribe.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace Tribe.Controller.CreatorOrga
+{
+    [ApiController]
+    [Route("api/admin/organisation/{organisationId}/members")]
+    [Authorize]
+    public class OrganizationMemberAdminController : ControllerBase
+    {
+        private readonly IOrganizationMemberService _memberService;
+        private readonly OrgaDbContext _db;
+
+        public OrganizationMemberAdminController(IOrganizationMemberService memberService, OrgaDbContext db)
+        {
+            _memberService = memberService;
+            _db = db;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAll(string organisationId)
+        {
+            var list = await _memberService.GetByOrganizationAsync(organisationId);
+            return Ok(list);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create(string organisationId, [FromBody] OrganizationMember member)
+        {
+            var profileId = User.FindFirst("profileId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (profileId == null) return Forbid();
+
+            member.OrganizationId = organisationId;
+            if (string.IsNullOrEmpty(member.UserId)) member.UserId = profileId;
+
+            var created = await _memberService.CreateAsync(member);
+            return CreatedAtAction(nameof(GetAll), new { organisationId = organisationId }, created);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(string organisationId, string id)
+        {
+            var existing = await _db.OrganizationMembers.FindAsync(id);
+            if (existing == null || existing.OrganizationId != organisationId) return NotFound();
+
+            var ok = await _memberService.RemoveAsync(id);
+            if (!ok) return BadRequest();
+            return NoContent();
+        }
+    }
+}

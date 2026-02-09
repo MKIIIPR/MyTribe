@@ -33,7 +33,14 @@ namespace Tribe.Bib.Models.TribeRelated
             public const string Instant = "Instant";          // Sofortige Gewinnchance
             public const string Progressive = "Progressive";   // Jackpot w�chst �ber Zeit
         }
-
+        public static class ApplicationStatus
+        {
+            public const string Pending = "Pending";         // Entry ausstehend
+            public const string Confirmed = "Confirmed";     // Entry best�tigt
+            public const string Disqualified = "Disqualified"; // Entry disqualifiziert
+            public const string Winner = "Winner";           // Gewinner Entry
+            public const string Loser = "Loser";             // Verlierer Entry
+        }
         public static class RequirementTypes
         {
             public const string Free = "Free";               // Kostenlose Teilnahme
