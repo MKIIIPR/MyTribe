@@ -1,4 +1,4 @@
-@page "/testview/creator/profile"
+@page "/creator/profile"
 @using MudBlazor
 @using Tribe.Services.ClientServices.ShopServices
 @using Tribe.Bib.Models.TribeRelated
@@ -8,7 +8,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 
-<TestView.Creator.CreatorLayout>
+<Creator.CreatorLayout>
     <!-- Page Header -->
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-6">
         <MudStack Spacing="0">
@@ -229,7 +229,7 @@
             </MudForm>
         </MudItem>
     </MudGrid>
-</TestView.Creator.CreatorLayout>
+</Creator.CreatorLayout>
 
 @code {
     [CascadingParameter(Name = "CreatorProfile")]
@@ -246,7 +246,7 @@
 
     private List<BreadcrumbItem> _breadcrumbs = new()
     {
-        new BreadcrumbItem("Dashboard", "/testview/creator"),
+        new BreadcrumbItem("Dashboard", "/creator"),
         new BreadcrumbItem("Profil", null, disabled: true)
     };
 

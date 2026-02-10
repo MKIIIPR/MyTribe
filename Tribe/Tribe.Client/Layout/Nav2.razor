@@ -1,47 +1,15 @@
 ﻿@implements IDisposable
-@using Tribe.Client.Services
-@using Tribe.Services.ClientServices.SimpleAuth
-@using Tribe.Services.States
 @inject NavigationManager NavigationManager
-@inject IAuthService AuthService
-@inject AuthenticationStateProvider AuthStateProvider
-@inject UserState UserState
 
 <MudNavMenu>
     <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
-    <MudNavLink Href="userdashboard" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">user</MudNavLink>
-    <MudNavLink Href="counter" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">Counter</MudNavLink>
 
-    <MudNavGroup Title="User" Expanded="true">
-        <MudNavLink Href="UserDashboard">Dashboard</MudNavLink>
-        <MudNavLink Href="Creator">creator</MudNavLink>
-        <MudNavLink Href="UserSensitiv">Security</MudNavLink>
-    </MudNavGroup>
-
-    <!-- Shop Management Navigation (für eingeloggte User mit Profil) -->
+    <!-- Creator Studio (neues Dashboard) -->
     <AuthorizeView>
         <Authorized>
-            <MudNavGroup Title="Shop" Expanded="false" Icon="@Icons.Material.Filled.Store">
-                @if (!string.IsNullOrEmpty(UserState?.TribeProfile?.Id))
-                {
-                    <MudNavLink Href="@($"creator/{UserState.TribeProfile.Id}")" Icon="@Icons.Material.Filled.Web">
-                        Meine Landing Page
-                    </MudNavLink>
-                    <MudDivider Class="my-2" />
-                }
-                <MudNavLink Href="creator/shop/dashboard" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
-                <MudDivider Class="my-2" />
-                <MudNavLink Href="creator/shop/products" Icon="@Icons.Material.Filled.ShoppingCart">Produkte</MudNavLink>
-                <MudNavLink Href="creator/shop/categories" Icon="@Icons.Material.Filled.Category">Kategorien</MudNavLink>
-                <MudNavLink Href="creator/shop/raffles" Icon="@Icons.Material.Filled.EmojiEvents">Raffles</MudNavLink>
-                <MudDivider Class="my-2" />
-                <MudNavLink Href="creator/shop/orders" Icon="@Icons.Material.Filled.Receipt">Bestellungen</MudNavLink>
-            </MudNavGroup>
+            <MudNavLink Href="creator" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Dashboard">Creator Studio</MudNavLink>
         </Authorized>
     </AuthorizeView>
-
-    <MudNavLink Href="weather" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.List">Weather</MudNavLink>
-    <MudNavLink Href="auth" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Lock">Auth Required</MudNavLink>
 
     <!-- Test Page Link -->
     <AuthorizeView>
@@ -73,14 +41,6 @@
     {
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         NavigationManager.LocationChanged += OnLocationChanged;
-
-        // Subscribe to UserState changes to re-render when IsCreator changes
-        UserState.OnChange += OnUserStateChanged;
-    }
-
-    private void OnUserStateChanged()
-    {
-        InvokeAsync(StateHasChanged);
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -98,6 +58,5 @@
     public void Dispose()
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
-        UserState.OnChange -= OnUserStateChanged;
     }
 }

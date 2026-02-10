@@ -1,4 +1,4 @@
-@page "/testview/creator"
+@page "/creator"
 @using MudBlazor
 @using Tribe.Services.ClientServices.ShopServices
 @using Tribe.Bib.ShopRelated
@@ -7,7 +7,7 @@
 @inject IRaffleClientService RaffleService
 @inject NavigationManager Navigation
 
-<TestView.Creator.CreatorLayout>
+<Creator.CreatorLayout>
     <!-- Page Header -->
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-6">
         <MudStack Spacing="0">
@@ -16,11 +16,11 @@
         </MudStack>
         <MudStack Row="true" Spacing="2">
             <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" 
-                       OnClick="@(() => Navigation.NavigateTo("/testview/creator/shop"))">
+                       OnClick="@(() => Navigation.NavigateTo("/creator/shop"))">
                 Neues Produkt
             </MudButton>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.EmojiEvents"
-                       OnClick="@(() => Navigation.NavigateTo("/testview/creator/raffles"))">
+                       OnClick="@(() => Navigation.NavigateTo("/creator/raffles"))">
                 Neues Raffle
             </MudButton>
         </MudStack>
@@ -93,19 +93,19 @@
                 <MudText Typo="Typo.h6" Class="mb-4">Schnellaktionen</MudText>
                 <MudStack Spacing="2">
                     <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Edit" FullWidth="true"
-                               Href="/testview/creator/profile" Style="justify-content: flex-start;">
+                               Href="/creator/profile" Style="justify-content: flex-start;">
                         Profil bearbeiten
                     </MudButton>
                     <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.AddShoppingCart" FullWidth="true"
-                               Href="/testview/creator/shop" Style="justify-content: flex-start;">
+                               Href="/creator/shop" Style="justify-content: flex-start;">
                         Produkt hinzufügen
                     </MudButton>
                     <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Casino" FullWidth="true"
-                               Href="/testview/creator/raffles" Style="justify-content: flex-start;">
+                               Href="/creator/raffles" Style="justify-content: flex-start;">
                         Raffle erstellen
                     </MudButton>
                     <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Token" FullWidth="true"
-                               Href="/testview/creator/tokens" Style="justify-content: flex-start;">
+                               Href="/creator/tokens" Style="justify-content: flex-start;">
                         Tokens verwalten
                     </MudButton>
                     <MudDivider Class="my-2" />
@@ -122,7 +122,7 @@
             <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
                     <MudText Typo="Typo.h6">Neueste Produkte</MudText>
-                    <MudButton Variant="Variant.Text" Size="Size.Small" Href="/testview/creator/shop">
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Href="/creator/shop">
                         Alle anzeigen
                     </MudButton>
                 </MudStack>
@@ -166,7 +166,7 @@
             <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
                 <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
                     <MudText Typo="Typo.h6">Aktive Raffles</MudText>
-                    <MudButton Variant="Variant.Text" Size="Size.Small" Href="/testview/creator/raffles">
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Href="/creator/raffles">
                         Alle anzeigen
                     </MudButton>
                 </MudStack>
@@ -206,7 +206,7 @@
         <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
             <MudText Typo="Typo.h6">Dein öffentliches Profil</MudText>
             <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit"
-                       Href="/testview/creator/profile">
+                       Href="/creator/profile">
                 Bearbeiten
             </MudButton>
         </MudStack>
@@ -260,7 +260,7 @@
             </MudGrid>
         }
     </MudPaper>
-</TestView.Creator.CreatorLayout>
+</Creator.CreatorLayout>
 
 @code {
     [CascadingParameter(Name = "CreatorProfile")]

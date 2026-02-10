@@ -1,10 +1,10 @@
-@page "/testview/creator/settings"
+@page "/creator/settings"
 @using MudBlazor
 @using Tribe.Services.ClientServices.ShopServices
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
-<TestView.Creator.CreatorLayout>
+<Creator.CreatorLayout>
     <!-- Page Header -->
     <MudStack Spacing="0" Class="mb-6">
         <MudBreadcrumbs Items="_breadcrumbs" Class="pa-0" />
@@ -218,7 +218,7 @@
             </MudPaper>
         </MudItem>
     </MudGrid>
-</TestView.Creator.CreatorLayout>
+</Creator.CreatorLayout>
 
 @code {
     [CascadingParameter(Name = "CreatorProfile")]
@@ -233,7 +233,7 @@
 
     private List<BreadcrumbItem> _breadcrumbs = new()
     {
-        new BreadcrumbItem("Dashboard", "/testview/creator"),
+        new BreadcrumbItem("Dashboard", "/creator"),
         new BreadcrumbItem("Einstellungen", null, disabled: true)
     };
 }

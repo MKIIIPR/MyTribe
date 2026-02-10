@@ -1,4 +1,4 @@
-@page "/testview/creator/raffles"
+@page "/creator/raffles"
 @using MudBlazor
 @using Tribe.Services.ClientServices.ShopServices
 @using Tribe.Bib.Models.TribeRelated
@@ -6,7 +6,7 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
-<TestView.Creator.CreatorLayout>
+<Creator.CreatorLayout>
     <!-- Page Header -->
     <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-6">
         <MudStack Spacing="0">
@@ -65,7 +65,7 @@
             @RenderRaffleList(_raffles.Where(r => r.Status?.ToLower() == "drawn"))
         </MudTabPanel>
     </MudTabs>
-</TestView.Creator.CreatorLayout>
+</Creator.CreatorLayout>
 
 @code {
     [CascadingParameter(Name = "ProfileId")]
@@ -76,7 +76,7 @@
 
     private List<BreadcrumbItem> _breadcrumbs = new()
     {
-        new BreadcrumbItem("Dashboard", "/testview/creator"),
+        new BreadcrumbItem("Dashboard", "/creator"),
         new BreadcrumbItem("Raffles", null, disabled: true)
     };
 

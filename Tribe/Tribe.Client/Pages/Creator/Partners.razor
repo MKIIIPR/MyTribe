@@ -1,33 +1,26 @@
-@page "/testview/creator/tokens"
+@page "/creator/partners"
 @using MudBlazor
 @using Tribe.Services.ClientServices.ShopServices
 @using Tribe.Bib.Models.TribeRelated
 @inject ISnackbar Snackbar
 
-<TestView.Creator.CreatorLayout>
+<Creator.CreatorLayout>
     <!-- Page Header -->
     <MudStack Spacing="0" Class="mb-6">
         <MudBreadcrumbs Items="_breadcrumbs" Class="pa-0" />
-        <MudText Typo="Typo.h4">Token Verwaltung</MudText>
+        <MudText Typo="Typo.h4">Affiliate Partner</MudText>
         <MudText Typo="Typo.body2" Color="Color.Secondary">
-            Erstelle und verwalte eigene Tokens für deine Community.
+            Verwalte deine Partnerschaften und Affiliate-Links.
         </MudText>
     </MudStack>
-
-    <!-- Info Banner -->
-    <MudAlert Severity="Severity.Info" Class="mb-4">
-        <MudText Typo="Typo.body2">
-            Tokens können für Raffles, Belohnungen oder als Währung in deinem Shop verwendet werden.
-        </MudText>
-    </MudAlert>
 
     <!-- Use existing component -->
     <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="border: 1px solid var(--mud-palette-lines-default);">
         <CascadingValue Value="_creatorProfile">
-            <Tribe.Ui.Pages.UserDashboard.CreatorProfile.Dialogs.CreatorTokensEdit />
+            <Tribe.Ui.Pages.UserDashboard.CreatorProfile.Dialogs.AffiliatePartnersEdit />
         </CascadingValue>
     </MudPaper>
-</TestView.Creator.CreatorLayout>
+</Creator.CreatorLayout>
 
 @code {
     [CascadingParameter(Name = "CreatorProfile")]
@@ -37,7 +30,7 @@
 
     private List<BreadcrumbItem> _breadcrumbs = new()
     {
-        new BreadcrumbItem("Dashboard", "/testview/creator"),
-        new BreadcrumbItem("Tokens", null, disabled: true)
+        new BreadcrumbItem("Dashboard", "/creator"),
+        new BreadcrumbItem("Partner", null, disabled: true)
     };
 }
