@@ -127,15 +127,26 @@ namespace Tribe.Services.ClientServices.ShopServices
 
         public async Task<ShopProduct?> CreateProductAsync<T>(T product) where T : ShopProduct
         {
-            return await _apiService.PostAsync<T, ShopProduct>(ProductsEndpoint, product);
+            try
+            {
+                var el = await _apiService.PostAsync<T, System.Text.Json.JsonElement>(ProductsEndpoint, product);
+                if (el.ValueKind != System.Text.Json.JsonValueKind.Object) return null;
+                return ParseShopProduct(el);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "CreateProductAsync failed");
+                return null;
+            }
         }
 
         public async Task<ShopProduct?> CreateProductAsync(ProductDto dto)
         {
             try
             {
-                var result = await _apiService.PostAsync<ProductDto, ShopProduct>(ProductsEndpoint, dto);
-                return result;
+                var el = await _apiService.PostAsync<ProductDto, System.Text.Json.JsonElement>(ProductsEndpoint, dto);
+                if (el.ValueKind != System.Text.Json.JsonValueKind.Object) return null;
+                return ParseShopProduct(el);
             }
             catch (Exception ex)
             {
@@ -162,13 +173,55 @@ namespace Tribe.Services.ClientServices.ShopServices
                 return new List<ShopProduct>();
             }
 
-            var result = await _apiService.GetAsync<List<ShopProduct>>($"{ProductsEndpoint}/creator/{creatorId}");
-            return result ?? new List<ShopProduct>();
+            var elements = await _apiService.GetAsync<List<System.Text.Json.JsonElement>>($"{ProductsEndpoint}/creator/{creatorId}");
+            var list = new List<ShopProduct>();
+            if (elements == null) return list;
+            foreach (var el in elements)
+            {
+                try
+                {
+                    var p = ParseShopProduct(el);
+                    if (p != null) list.Add(p);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to parse product element in GetCreatorProductsAsync");
+                }
+            }
+            return list;
         }
 
         public async Task<bool> DeleteProductAsync(string productId)
         {
             return await _apiService.DeleteAsync($"{ProductsEndpoint}/{productId}");
+        }
+
+        private ShopProduct? ParseShopProduct(System.Text.Json.JsonElement je)
+        {
+            try
+            {
+                var opts = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                if (je.ValueKind != System.Text.Json.JsonValueKind.Object) return null;
+
+                if (je.TryGetProperty("SKU", out _) || je.TryGetProperty("StockQuantity", out _))
+                    return System.Text.Json.JsonSerializer.Deserialize<PhysicalProduct>(je.GetRawText(), opts);
+                if (je.TryGetProperty("VideoUrl", out _))
+                    return System.Text.Json.JsonSerializer.Deserialize<VideoProduct>(je.GetRawText(), opts);
+                if (je.TryGetProperty("HighResImageUrls", out _) || je.TryGetProperty("ImageFormat", out _))
+                    return System.Text.Json.JsonSerializer.Deserialize<ImageProduct>(je.GetRawText(), opts);
+                if (je.TryGetProperty("DurationMinutes", out _))
+                    return System.Text.Json.JsonSerializer.Deserialize<ServiceProduct>(je.GetRawText(), opts);
+                if (je.TryGetProperty("EventDate", out _))
+                    return System.Text.Json.JsonSerializer.Deserialize<EventTicketProduct>(je.GetRawText(), opts);
+
+                // Fallback
+                return System.Text.Json.JsonSerializer.Deserialize<PhysicalProduct>(je.GetRawText(), opts);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "ParseShopProduct failed");
+                return null;
+            }
         }
     }
 }

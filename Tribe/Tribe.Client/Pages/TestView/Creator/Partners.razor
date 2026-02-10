@@ -1,0 +1,36 @@
+@page "/testview/creator/partners"
+@using MudBlazor
+@using Tribe.Services.ClientServices.ShopServices
+@using Tribe.Bib.Models.TribeRelated
+@inject ISnackbar Snackbar
+
+<TestView.Creator.CreatorLayout>
+    <!-- Page Header -->
+    <MudStack Spacing="0" Class="mb-6">
+        <MudBreadcrumbs Items="_breadcrumbs" Class="pa-0" />
+        <MudText Typo="Typo.h4">Affiliate Partner</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            Verwalte deine Partnerschaften und Affiliate-Links.
+        </MudText>
+    </MudStack>
+
+    <!-- Use existing component -->
+    <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="border: 1px solid var(--mud-palette-lines-default);">
+        <CascadingValue Value="_creatorProfile">
+            <Tribe.Ui.Pages.UserDashboard.CreatorProfile.Dialogs.AffiliatePartnersEdit />
+        </CascadingValue>
+    </MudPaper>
+</TestView.Creator.CreatorLayout>
+
+@code {
+    [CascadingParameter(Name = "CreatorProfile")]
+    private CreatorProfileDto? _profile { get; set; }
+    
+    private CreatorProfile? _creatorProfile;
+
+    private List<BreadcrumbItem> _breadcrumbs = new()
+    {
+        new BreadcrumbItem("Dashboard", "/testview/creator"),
+        new BreadcrumbItem("Partner", null, disabled: true)
+    };
+}

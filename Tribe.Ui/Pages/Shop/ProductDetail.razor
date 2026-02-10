@@ -1,3 +1,4 @@
+@page "/{CreatorName}/shop/{ProductId}"
 @page "/shop/product/{ProductId}"
 @using MudBlazor
 @using Tribe.Bib.Models.TribeRelated
@@ -10,7 +11,6 @@
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
-@inject IRaffleClientService RaffleService
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
     @if (_isLoading)
@@ -93,8 +93,8 @@
                                       OnClick="AddToCart">
                                 In Warenkorb
                             </MudButton>
-                            <MudButton Variant="Variant.Text" OnClick="@(() => Navigation.NavigateTo("/"))">
-                                Zurück
+                            <MudButton Variant="Variant.Text" OnClick="GoBack">
+                                Zurück zum Shop
                             </MudButton>
                         </MudStack>
                     </MudStack>
@@ -122,7 +122,7 @@
                     </MudCard>
                 }
 
-                <MudButton Variant="Variant.Text" Href="@($"/shop/product/{ProductId}/reviews")">
+                <MudButton Variant="Variant.Text" Href="@GetReviewsUrl()">
                     Alle Bewertungen anzeigen
                 </MudButton>
             </MudStack>
@@ -132,6 +132,8 @@
 
 @code{
     [Parameter] public string? ProductId { get; set; }
+    [Parameter] public string? CreatorName { get; set; }
+
     private ShopProduct? _product;
     private List<ProductReview> _reviews = new();
     private Raffle? _boundRaffle;
@@ -209,5 +211,27 @@
     private int GetAverageRating()
     {
         return _reviews.Count > 0 ? (int)_reviews.Average(r => r.Rating) : 0;
+    }
+
+    private void GoBack()
+    {
+        // Navigiere zurück zum Creator-Shop
+        if (!string.IsNullOrEmpty(CreatorName))
+        {
+            Navigation.NavigateTo($"/{CreatorName}/shop");
+        }
+        else
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private string GetReviewsUrl()
+    {
+        if (!string.IsNullOrEmpty(CreatorName))
+        {
+            return $"/{CreatorName}/shop/{ProductId}/reviews";
+        }
+        return $"/shop/product/{ProductId}/reviews";
     }
 }

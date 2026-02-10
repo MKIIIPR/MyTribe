@@ -1,0 +1,360 @@
+@page "/testview/creator/profile"
+@using MudBlazor
+@using Tribe.Services.ClientServices.ShopServices
+@using Tribe.Bib.Models.TribeRelated
+@using Tribe.Client.Services
+@inject IClientApiService ClientApiService
+@inject ICreatorProfileClientService CreatorProfileService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<TestView.Creator.CreatorLayout>
+    <!-- Page Header -->
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-6">
+        <MudStack Spacing="0">
+            <MudBreadcrumbs Items="_breadcrumbs" Class="pa-0" />
+            <MudText Typo="Typo.h4">Profil bearbeiten</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Verwalte dein öffentliches Creator-Profil und Social-Media-Links.
+            </MudText>
+        </MudStack>
+        <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.OpenInNew"
+                   Href="@GetPublicProfileUrl()" Target="_blank">
+            Vorschau
+        </MudButton>
+    </MudStack>
+
+    <MudGrid Spacing="4">
+        <!-- Linke Spalte: Vorschau -->
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="0" Class="pa-4 rounded-lg sticky-top" Style="border: 1px solid var(--mud-palette-lines-default); top: 80px;">
+                <MudText Typo="Typo.h6" Class="mb-4">Vorschau</MudText>
+                
+                <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="mb-4">
+                    @if (!string.IsNullOrEmpty(_editModel.BannerUrl))
+                    {
+                        <MudImage Src="@_editModel.BannerUrl" ObjectFit="ObjectFit.Cover" 
+                                  Style="width: 100%; height: 100px; border-radius: 8px;" />
+                    }
+                    else
+                    {
+                        <MudPaper Elevation="0" Class="d-flex align-center justify-center rounded"
+                                  Style="width: 100%; height: 100px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <MudIcon Icon="@Icons.Material.Filled.Image" Color="Color.Surface" />
+                        </MudPaper>
+                    }
+                    
+                    <MudAvatar Size="Size.Large" Style="width: 80px; height: 80px; margin-top: -40px; border: 4px solid var(--mud-palette-surface);">
+                        @if (!string.IsNullOrEmpty(_editModel.ImageTemplateUrl))
+                        {
+                            <MudImage Src="@_editModel.ImageTemplateUrl" />
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Person" />
+                        }
+                    </MudAvatar>
+                    
+                    <MudText Typo="Typo.h6">@(_profile?.DisplayName ?? "Creator")</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Primary">@@@_editModel.CreatorName</MudText>
+                </MudStack>
+
+                @if (_editModel.AcceptingCollaborations)
+                {
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="mb-2">
+                        Offen für Kooperationen
+                    </MudChip>
+                }
+
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    Öffentliche URL: <strong>tribe.com/@_editModel.CreatorName</strong>
+                </MudText>
+
+                <MudDivider Class="my-4" />
+
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Social Links</MudText>
+                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap">
+                    @if (!string.IsNullOrEmpty(_editModel.YouTubeUrl))
+                    {
+                        <MudIconButton Icon="@Icons.Custom.Brands.YouTube" Color="Color.Error" Size="Size.Small" />
+                    }
+                    @if (!string.IsNullOrEmpty(_editModel.TwitchUrl))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Tv" Color="Color.Secondary" Size="Size.Small" />
+                    }
+                    @if (!string.IsNullOrEmpty(_editModel.TwitterUrl))
+                    {
+                        <MudIconButton Icon="@Icons.Custom.Brands.Twitter" Color="Color.Info" Size="Size.Small" />
+                    }
+                    @if (!string.IsNullOrEmpty(_editModel.InstagramUrl))
+                    {
+                        <MudIconButton Icon="@Icons.Custom.Brands.Instagram" Color="Color.Warning" Size="Size.Small" />
+                    }
+                    @if (!string.IsNullOrEmpty(_editModel.DiscordUrl))
+                    {
+                        <MudIconButton Icon="@Icons.Custom.Brands.Discord" Color="Color.Primary" Size="Size.Small" />
+                    }
+                    @if (!string.IsNullOrEmpty(_editModel.TikTokUrl))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.MusicNote" Color="Color.Dark" Size="Size.Small" />
+                    }
+                    @if (!string.IsNullOrEmpty(_editModel.PatreonUrl))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Favorite" Color="Color.Tertiary" Size="Size.Small" />
+                    }
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Rechte Spalte: Bearbeitungsformular -->
+        <MudItem xs="12" md="8">
+            <MudForm @ref="_form" @bind-IsValid="_isValid">
+                <!-- Allgemeine Informationen -->
+                <MudPaper Elevation="0" Class="pa-4 rounded-lg mb-4" Style="border: 1px solid var(--mud-palette-lines-default);">
+                    <MudText Typo="Typo.h6" Class="mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Class="mr-2" />
+                        Allgemeine Informationen
+                    </MudText>
+                    
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_editModel.CreatorName"
+                                          Label="Creator Name (URL)" Required="true"
+                                          RequiredError="Creator Name ist erforderlich"
+                                          HelperText="Wird in der URL verwendet: tribe.com/deinname"
+                                          MaxLength="100" Counter="100" Immediate="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_editModel.ImageTemplateUrl"
+                                          Label="Profilbild URL" Placeholder="https://..."
+                                          HelperText="URL zu deinem Profilbild" Immediate="true" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudTextField @bind-Value="_editModel.BannerUrl"
+                                          Label="Banner URL" Placeholder="https://..."
+                                          HelperText="URL zu deinem Profilbanner (1200x400 empfohlen)" Immediate="true" />
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+
+                <!-- Kooperationen -->
+                <MudPaper Elevation="0" Class="pa-4 rounded-lg mb-4" Style="border: 1px solid var(--mud-palette-lines-default);">
+                    <MudText Typo="Typo.h6" Class="mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Handshake" Class="mr-2" />
+                        Kooperationen
+                    </MudText>
+                    
+                    <MudSwitch T="bool" @bind-Value="_editModel.AcceptingCollaborations"
+                               Label="Offen für Kooperationen" Color="Color.Success" />
+                    
+                    @if (_editModel.AcceptingCollaborations)
+                    {
+                        <MudTextField @bind-Value="_editModel.CollaborationInfo" Class="mt-4"
+                                      Label="Kooperations-Info" Lines="3"
+                                      Placeholder="Beschreibe, welche Art von Kooperationen dich interessieren..."
+                                      HelperText="Diese Information wird öffentlich angezeigt" />
+                    }
+                </MudPaper>
+
+                <!-- Social Media Links -->
+                <MudPaper Elevation="0" Class="pa-4 rounded-lg mb-4" Style="border: 1px solid var(--mud-palette-lines-default);">
+                    <MudText Typo="Typo.h6" Class="mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Share" Class="mr-2" />
+                        Social Media Links
+                    </MudText>
+                    
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_editModel.YouTubeUrl" Label="YouTube"
+                                          Placeholder="https://youtube.com/channel"
+                                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Custom.Brands.YouTube"
+                                          AdornmentColor="Color.Error" Immediate="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_editModel.TwitchUrl" Label="Twitch"
+                                          Placeholder="https://twitch.tv/username"
+                                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Tv"
+                                          AdornmentColor="Color.Secondary" Immediate="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_editModel.TwitterUrl" Label="Twitter/X"
+                                          Placeholder="https://twitter.com/username"
+                                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Custom.Brands.Twitter"
+                                          AdornmentColor="Color.Info" Immediate="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_editModel.InstagramUrl" Label="Instagram"
+                                          Placeholder="https://instagram.com/username"
+                                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Custom.Brands.Instagram"
+                                          AdornmentColor="Color.Warning" Immediate="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_editModel.TikTokUrl" Label="TikTok"
+                                          Placeholder="https://tiktok.com/username"
+                                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.MusicNote"
+                                          AdornmentColor="Color.Dark" Immediate="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_editModel.DiscordUrl" Label="Discord"
+                                          Placeholder="https://discord.gg/invite"
+                                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Custom.Brands.Discord"
+                                          AdornmentColor="Color.Primary" Immediate="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudTextField @bind-Value="_editModel.PatreonUrl" Label="Patreon"
+                                          Placeholder="https://patreon.com/username"
+                                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Favorite"
+                                          AdornmentColor="Color.Tertiary" Immediate="true" />
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+
+                <!-- Speichern Button -->
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+                    <MudButton Variant="Variant.Text" OnClick="ResetForm">Zurücksetzen</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Save"
+                               OnClick="SaveProfile" Disabled="_isSaving">
+                        @if (_isSaving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            <span>Speichern...</span>
+                        }
+                        else
+                        {
+                            <span>Änderungen speichern</span>
+                        }
+                    </MudButton>
+                </MudStack>
+            </MudForm>
+        </MudItem>
+    </MudGrid>
+</TestView.Creator.CreatorLayout>
+
+@code {
+    [CascadingParameter(Name = "CreatorProfile")]
+    private CreatorProfileDto? _profile { get; set; }
+    
+    [CascadingParameter(Name = "ProfileId")]
+    private string? _profileId { get; set; }
+
+    private MudForm _form = null!;
+    private bool _isValid;
+    private bool _isSaving;
+    private EditProfileModel _editModel = new();
+    private EditProfileModel _originalModel = new();
+
+    private List<BreadcrumbItem> _breadcrumbs = new()
+    {
+        new BreadcrumbItem("Dashboard", "/testview/creator"),
+        new BreadcrumbItem("Profil", null, disabled: true)
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (_profile != null)
+        {
+            _editModel = new EditProfileModel
+            {
+                CreatorName = _profile.CreatorName ?? "",
+                BannerUrl = _profile.BannerUrl ?? "",
+                ImageTemplateUrl = _profile.AvatarUrl ?? "",
+                AcceptingCollaborations = _profile.AcceptingCollaborations,
+                CollaborationInfo = _profile.CollaborationInfo ?? "",
+                YouTubeUrl = _profile.YouTubeUrl ?? "",
+                TwitchUrl = _profile.TwitchUrl ?? "",
+                TwitterUrl = _profile.TwitterUrl ?? "",
+                InstagramUrl = _profile.InstagramUrl ?? "",
+                TikTokUrl = _profile.TikTokUrl ?? "",
+                DiscordUrl = _profile.DiscordUrl ?? "",
+                PatreonUrl = _profile.PatreonUrl ?? ""
+            };
+            _originalModel = _editModel with { }; // Clone
+        }
+    }
+
+    private async Task SaveProfile()
+    {
+        await _form.Validate();
+        if (!_isValid) return;
+
+        _isSaving = true;
+        try
+        {
+            // Prüfe ob CreatorName verfügbar ist
+            if (_editModel.CreatorName != _profile?.CreatorName)
+            {
+                var isAvailable = await CreatorProfileService.IsCreatorNameAvailableAsync(_editModel.CreatorName);
+                if (!isAvailable)
+                {
+                    Snackbar.Add("Dieser Creator-Name ist bereits vergeben!", Severity.Error);
+                    _isSaving = false;
+                    return;
+                }
+            }
+
+            var request = new UpdateCreatorProfileRequest
+            {
+                CreatorName = _editModel.CreatorName,
+                BannerUrl = _editModel.BannerUrl,
+                ImageTemplateUrl = _editModel.ImageTemplateUrl,
+                AcceptingCollaborations = _editModel.AcceptingCollaborations,
+                CollaborationInfo = _editModel.CollaborationInfo,
+                YouTubeUrl = _editModel.YouTubeUrl,
+                TwitchUrl = _editModel.TwitchUrl,
+                TwitterUrl = _editModel.TwitterUrl,
+                InstagramUrl = _editModel.InstagramUrl,
+                TikTokUrl = _editModel.TikTokUrl,
+                DiscordUrl = _editModel.DiscordUrl,
+                PatreonUrl = _editModel.PatreonUrl
+            };
+
+            var success = await CreatorProfileService.UpdateCreatorProfileAsync(request);
+            if (success)
+            {
+                Snackbar.Add("Profil erfolgreich gespeichert!", Severity.Success);
+                _originalModel = _editModel with { };
+            }
+            else
+            {
+                Snackbar.Add("Fehler beim Speichern des Profils", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        _editModel = _originalModel with { };
+    }
+
+    private string GetPublicProfileUrl()
+    {
+        if (!string.IsNullOrEmpty(_editModel.CreatorName))
+            return $"/{_editModel.CreatorName}";
+        return "/";
+    }
+
+    private record EditProfileModel
+    {
+        public string CreatorName { get; set; } = "";
+        public string BannerUrl { get; set; } = "";
+        public string ImageTemplateUrl { get; set; } = "";
+        public bool AcceptingCollaborations { get; set; }
+        public string CollaborationInfo { get; set; } = "";
+        public string YouTubeUrl { get; set; } = "";
+        public string TwitchUrl { get; set; } = "";
+        public string TwitterUrl { get; set; } = "";
+        public string InstagramUrl { get; set; } = "";
+        public string TikTokUrl { get; set; } = "";
+        public string DiscordUrl { get; set; } = "";
+        public string PatreonUrl { get; set; } = "";
+    }
+}

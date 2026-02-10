@@ -19,16 +19,22 @@
                         </MudItem>
 
                         <!-- Produkttyp Auswahl (nur bei neuem Produkt) -->
-                        @if (string.IsNullOrEmpty(_editProduct?.Id) || _isNewProduct)
+                        @if (IsNew)
                         {
                             <MudItem xs="12">
-                                <MudSelect T="string" @bind-Value="_selectedProductType" Label="Produkttyp *" Required="true" Variant="Variant.Outlined">
+                                <MudSelect T="string" Value="_selectedProductType" ValueChanged="OnProductTypeChanged" Label="Produkttyp *" Required="true" Variant="Variant.Outlined">
                                     <MudSelectItem Value="@ProductTypes.Physical">Physisches Produkt</MudSelectItem>
                                     <MudSelectItem Value="@ProductTypes.Video">Video / Digital</MudSelectItem>
                                     <MudSelectItem Value="@ProductTypes.Image">Bilder / Fotos</MudSelectItem>
                                     <MudSelectItem Value="@ProductTypes.Service">Dienstleistung</MudSelectItem>
                                     <MudSelectItem Value="@ProductTypes.EventTicket">Event-Ticket</MudSelectItem>
                                 </MudSelect>
+                            </MudItem>
+                        }
+                        else
+                        {
+                            <MudItem xs="12">
+                                <MudTextField Value="@GetProductTypeLabel(_selectedProductType)" Label="Produkttyp" ReadOnly="true" Variant="Variant.Outlined" />
                             </MudItem>
                         }
 
@@ -184,10 +190,9 @@
     private IMudDialogInstance Dialog { get; set; } = default!;
 
     [Parameter]
-    public ShopProduct Product { get; set; } = new PhysicalProduct();
+    public ShopProduct? Product { get; set; }
 
-    [Parameter]
-    public bool IsNewProduct { get; set; } = false;
+    // New-product decision is based on product id and server existence. No external IsNewProduct parameter required.
 
     private MudForm? _form;
     private bool _isValid;
@@ -197,26 +202,53 @@
     private Raffle? _boundRaffle;
     private string _selectedProductType = ProductTypes.Physical;
     private decimal? _originalPrice;
-    private bool _isNewProduct => IsNewProduct || string.IsNullOrEmpty(Product?.Id);
+    private bool _isNewProduct => Product == null || string.IsNullOrEmpty(Product?.Id);
+    private bool _existsOnServer = false;
 
-    private readonly string[] _statusOptions = { "Active", "Draft", "Inactive" };
+    // consider product new when it does not exist on server
+    private bool IsNew => !_existsOnServer;
+
+    private readonly string[] _statusOptions = { ProductStatus.Active, ProductStatus.Draft, ProductStatus.Inactive };
     private readonly Dictionary<string, string> _statusLabels = new()
     {
-        { "Active", "Aktiv" },
-        { "Draft", "Entwurf" },
-        { "Inactive", "Inaktiv" }
+        { ProductStatus.Active, "Aktiv" },
+        { ProductStatus.Draft, "Entwurf" },
+        { ProductStatus.Inactive, "Inaktiv" }
     };
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_isNewProduct)
+        // Wenn ein Produkt über Parameter geliefert wird: prüfe ob es bereits auf dem Server existiert
+        _existsOnServer = false;
+        if (Product != null && !string.IsNullOrEmpty(Product.Id))
         {
-            _editProduct = CreateProductByType(_selectedProductType);
+            try
+            {
+                var serverProduct = await ProductClient.GetProductByIdAsync(Product.Id);
+                if (serverProduct != null)
+                {
+                    // Produkt existiert auf dem Server -> Edit-Modus mit aktuellen Daten
+                    _existsOnServer = true;
+                    _editProduct = CloneProduct(serverProduct);
+                    _selectedProductType = GetProductType(_editProduct);
+                }
+                else
+                {
+                    // Produkt nicht auf Server -> treat as new
+                    _editProduct = CreateProductByType(_selectedProductType);
+                }
+            }
+            catch
+            {
+                // Bei Fehlern in der Abfrage: fallback auf neues Produkt (sicherer)
+                _existsOnServer = false;
+                _editProduct = CreateProductByType(_selectedProductType);
+            }
         }
         else
         {
-            _editProduct = CloneProduct(Product);
-            _selectedProductType = GetProductType(_editProduct);
+            // Kein Parameter geliefert -> neues Produkt erstellen
+            _editProduct = CreateProductByType(_selectedProductType);
         }
 
         _originalPrice = _editProduct.OriginalPrice;
@@ -235,6 +267,16 @@
         _ => ProductTypes.Physical
     };
 
+    private string GetProductTypeLabel(string productType) => productType switch
+    {
+        ProductTypes.Physical => "Physisches Produkt",
+        ProductTypes.Video => "Video / Digital",
+        ProductTypes.Image => "Bilder / Fotos",
+        ProductTypes.Service => "Dienstleistung",
+        ProductTypes.EventTicket => "Event-Ticket",
+        _ => "Unbekannt"
+    };
+
     private ShopProduct CreateProductByType(string productType) => productType switch
     {
         ProductTypes.Physical => new PhysicalProduct(),
@@ -244,6 +286,41 @@
         ProductTypes.EventTicket => new EventTicketProduct(),
         _ => new PhysicalProduct()
     };
+
+    private void OnProductTypeChanged(string newType)
+    {
+        if (_selectedProductType == newType) return;
+
+        // Basisdaten sichern
+        var title = _editProduct.Title;
+        var description = _editProduct.Description;
+        var price = _editProduct.Price;
+        var status = _editProduct.Status;
+        var thumbnailUrl = _editProduct.ThumbnailUrl;
+        var imageUrls = _editProduct.ImageUrls?.ToList() ?? new List<string>();
+        var tags = _editProduct.Tags?.ToList() ?? new List<string>();
+        var categoryId = _editProduct.CategoryId;
+        var seoTitle = _editProduct.SeoTitle;
+        var seoDescription = _editProduct.SeoDescription;
+
+        // Neues Produkt mit richtigem Typ erstellen
+        _selectedProductType = newType;
+        _editProduct = CreateProductByType(newType);
+
+        // Basisdaten wiederherstellen
+        _editProduct.Title = title;
+        _editProduct.Description = description;
+        _editProduct.Price = price;
+        _editProduct.Status = status;
+        _editProduct.ThumbnailUrl = thumbnailUrl;
+        _editProduct.ImageUrls = imageUrls;
+        _editProduct.Tags = tags;
+        _editProduct.CategoryId = categoryId;
+        _editProduct.SeoTitle = seoTitle;
+        _editProduct.SeoDescription = seoDescription;
+
+        StateHasChanged();
+    }
 
     private void HandleThumbnailUpload(string base64Image)
     {
@@ -329,15 +406,20 @@
 
         try
         {
-            if (_isNewProduct)
+        if (IsNew)
             {
                 // Neues Produkt erstellen
                 var dto = BuildProductDto();
                 var created = await ProductClient.CreateProductAsync(dto);
                 if (created != null)
                 {
-                    Snackbar.Add("Produkt erstellt", Severity.Success);
-                    Dialog.Close(DialogResult.Ok(true));
+                    // Produkt vom Server übernehmen und Formular updaten (nicht Dialog schließen)
+                    _existsOnServer = true;
+                    _editProduct = CloneProduct(created);
+                    _selectedProductType = GetProductType(_editProduct);
+                    _originalPrice = _editProduct.OriginalPrice;
+                    Snackbar.Add("Produkt erstellt. Formular wurde mit serverseitigen Daten aktualisiert.", Severity.Success);
+                    // Jetzt ist das Produkt existent — der Button wechselt zu "Speichern" und weitere Aktionen (z.B. Raffle binden) sind möglich.
                 }
                 else
                 {

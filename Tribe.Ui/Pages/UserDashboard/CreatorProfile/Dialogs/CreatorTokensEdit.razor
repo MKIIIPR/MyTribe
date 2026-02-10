@@ -1,0 +1,83 @@
+@using MudBlazor
+@using Tribe.Bib.Models.TribeRelated
+@using Tribe.Client.Services
+@inject IClientApiService ClientApiService
+@inject ISnackbar Snackbar
+
+<MudPaper Class="pa-4">
+    <MudText Typo="Typo.h6">Token Verwaltung</MudText>
+    <MudDivider Class="my-2" />
+
+    <MudStack Spacing="2">
+            @if (Creator?.CreatorTokens != null)
+            {
+                @foreach (var token in Creator.CreatorTokens)
+                {
+                    <MudPaper Class="pa-2 d-flex align-center justify-between">
+                        <div>
+                    <div><strong>@token.TokenName</strong> (Total: @token.TotalSupply)</div>
+                    <div class="mud-text-caption">@token.Description</div>
+                        </div>
+                        <div>
+                            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => Remove(token)">Entfernen</MudButton>
+                        </div>
+                    </MudPaper>
+                }
+            }
+        </MudStack>
+
+        <MudDivider Class="my-2" />
+        <MudText Typo="Typo.subtitle2">Neues Token hinzufügen</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudTextField @bind-Value="newName" Label="Name" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudNumericField T="int" @bind-Value="newAmount" Label="Amount" />
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudButton OnClick="Add" Variant="Variant.Filled" Color="Color.Primary">Hinzufügen</MudButton>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="newDescription" Label="Description" />
+            </MudItem>
+        </MudGrid>
+
+    <MudDivider Class="my-2" />
+    <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+        <MudButton Variant="Variant.Text" OnClick="Cancel">Abbrechen</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">Speichern</MudButton>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter] public CreatorProfile? Creator { get; set; }
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private string newName = string.Empty;
+    private int newAmount = 0;
+    private string newDescription = string.Empty;
+
+    private void Add()
+    {
+        if (Creator == null) return;
+        Creator.CreatorTokens ??= new List<CreatorToken>();
+        Creator.CreatorTokens.Add(new CreatorToken { Id = Guid.NewGuid().ToString(), TokenName = newName, TotalSupply = newAmount, Description = newDescription });
+        newName = string.Empty; newAmount = 0; newDescription = string.Empty;
+    }
+
+    private void Remove(CreatorToken token)
+    {
+        Creator?.CreatorTokens?.Remove(token);
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Save()
+    {
+        if (Creator == null) return;
+        var result = await ClientApiService.UpdateAsync("api/creatorprofile", Creator.Id, Creator);
+        if (result != null) MudDialog.Close(DialogResult.Ok(true));
+        else Snackbar.Add("Fehler beim Speichern", Severity.Error);
+    }
+}

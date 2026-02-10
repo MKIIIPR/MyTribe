@@ -1,0 +1,159 @@
+@page "/creator/dashboard"
+@using MudBlazor
+@using Microsoft.AspNetCore.Components.Authorization
+@using Tribe.Client.Services
+@using Tribe.Bib.Models.TribeRelated
+@using Tribe.Services.ClientServices.ShopServices
+@using Tribe.Ui.Pages.UserDashboard.CreatorProfile
+@using Tribe.Ui.Pages.UserDashboard.CreatorProfile.Dialogs
+@inject IClientApiService ClientApiService
+@inject ICreatorProfileClientService CreatorProfileService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ISnackbar Snackbar
+
+<MudPaper Class="pa-4">
+    <MudText Typo="Typo.h4">Creator Dashboard</MudText>
+    <MudDivider Class="my-2" />
+
+    @if (isLoading)
+    {
+        <MudProgressCircular Indeterminate="true" />
+    }
+    else if (profile == null)
+    {
+        <MudAlert Severity="Severity.Warning">
+            <MudText>Kein Creator-Profil gefunden.</MudText>
+            <MudText Typo="Typo.caption">ProfileId: @_profileId</MudText>
+        </MudAlert>
+    }
+
+    <MudTabs Rounded="true" Elevation="0" PanelClass="pa-4">
+        <MudTabPanel Text="Profile" Icon="Icons.Material.Filled.Person">
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <CreatorDisplay CreatorProfile="profile" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <CreatorEdit CreatorProfile="profile" OnProfileUpdated="OnProfileUpdated" />
+                </MudItem>
+            </MudGrid>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Shop" Icon="Icons.Material.Filled.ShoppingCart">
+            <MudText Typo="Typo.h6">Shop Verwaltung</MudText>
+            <MudText Class="mb-2">Verwalte deine Produkte und Angebote.</MudText>
+            <MudButton Href="/userdashboard/creatorshop" Variant="Variant.Filled" Color="Color.Primary">Zu Produkten</MudButton>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Raffles" Icon="Icons.Material.Filled.Casino">
+            <MudText Typo="Typo.h6">Raffles</MudText>
+            <MudText Class="mb-2">Erstelle und verwalte deine Raffles.</MudText>
+            <MudButton Href="/userdashboard/creatorshop/raffles" Variant="Variant.Filled" Color="Color.Primary">Zu Raffles</MudButton>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Tokens" Icon="Icons.Material.Filled.Token">
+            <MudText Typo="Typo.h6">Token Verwaltung</MudText>
+            <CascadingValue Value="profile">
+                <Tribe.Ui.Pages.UserDashboard.CreatorProfile.Dialogs.CreatorTokensEdit />
+            </CascadingValue>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Partner" Icon="Icons.Material.Filled.Handshake">
+            <MudText Typo="Typo.h6">Affiliate Partner</MudText>
+            <CascadingValue Value="profile">
+                <AffiliatePartnersEdit />
+            </CascadingValue>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Placements" Icon="Icons.Material.Filled.Place">
+            <MudText Typo="Typo.h6">Placements</MudText>
+            <CascadingValue Value="profile">
+                <CreatorPlacementsEdit />
+            </CascadingValue>
+        </MudTabPanel>
+    </MudTabs>
+</MudPaper>
+
+@code {
+    private CreatorProfile? profile;
+    private bool isLoading = true;
+    private string? _profileId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfileAsync();
+    }
+
+    private async Task LoadProfileAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = auth.User;
+            _profileId = user.FindFirst("profileId")?.Value;
+
+            Console.WriteLine($"[Dashboard] ProfileId from JWT: {_profileId}");
+
+            if (!string.IsNullOrEmpty(_profileId))
+            {
+                // Lade CreatorProfile über den dedizierten API-Endpoint
+                Console.WriteLine($"[Dashboard] Calling GetCreatorProfileAsync with profileId: {_profileId}");
+                var dto = await CreatorProfileService.GetCreatorProfileAsync(_profileId);
+
+                Console.WriteLine($"[Dashboard] DTO result: {(dto != null ? $"Id={dto.Id}, CreatorName={dto.CreatorName}" : "NULL")}");
+
+                if (dto != null)
+                {
+                    // Konvertiere DTO zu CreatorProfile für die Bearbeitung
+                    profile = new CreatorProfile
+                    {
+                        Id = dto.Id,
+                        CreatorName = dto.CreatorName,
+                        BannerUrl = dto.BannerUrl,
+                        VerifiedCreator = dto.VerifiedCreator,
+                        FollowerCount = dto.FollowerCount,
+                        TotalRaffles = dto.TotalRaffles,
+                        TotalTokensDistributed = dto.TotalTokensDistributed,
+                        PatreonUrl = dto.PatreonUrl,
+                        YouTubeUrl = dto.YouTubeUrl,
+                        TwitchUrl = dto.TwitchUrl,
+                        TwitterUrl = dto.TwitterUrl,
+                        InstagramUrl = dto.InstagramUrl,
+                        TikTokUrl = dto.TikTokUrl,
+                        DiscordUrl = dto.DiscordUrl,
+                        AcceptingCollaborations = dto.AcceptingCollaborations,
+                        CollaborationInfo = dto.CollaborationInfo
+                    };
+                    Console.WriteLine($"[Dashboard] Profile created: Id={profile.Id}, CreatorName={profile.CreatorName}");
+                }
+                else
+                {
+                    // Kein CreatorProfile gefunden - User ist möglicherweise kein Creator
+                    Console.WriteLine("[Dashboard] DTO was null, setting profile to null");
+                    profile = null;
+                }
+            }
+            else
+            {
+                Console.WriteLine("[Dashboard] ProfileId was null or empty");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Dashboard] Exception: {ex.Message}");
+            Snackbar.Add($"Fehler beim Laden des Profils: {ex.Message}", Severity.Error);
+            profile = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OnProfileUpdated(CreatorProfile updated)
+    {
+        profile = updated;
+        StateHasChanged();
+    }
+}

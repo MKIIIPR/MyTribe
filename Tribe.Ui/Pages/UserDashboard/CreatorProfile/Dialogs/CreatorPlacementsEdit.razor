@@ -1,0 +1,76 @@
+@using MudBlazor
+@using Tribe.Bib.Models.TribeRelated
+@using Tribe.Client.Services
+@inject IClientApiService ClientApiService
+@inject ISnackbar Snackbar
+
+<MudPaper Class="pa-4">
+    <MudText Typo="Typo.h6">Placements</MudText>
+    <MudDivider Class="my-2" />
+
+    <MudStack Spacing="2">
+        @if (Creator?.Placements != null)
+        {
+            @foreach (var p in Creator.Placements)
+            {
+                <MudPaper Class="pa-2 d-flex align-center justify-between">
+                    <div>
+                        <div><strong>@p.PlacementName</strong></div>
+                        <div class="mud-text-caption">@p.PlacementUrl</div>
+                    </div>
+                    <div>
+                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => Remove(p)">Entfernen</MudButton>
+                    </div>
+                </MudPaper>
+            }
+        }
+    </MudStack>
+
+    <MudDivider Class="my-2" />
+    <MudText Typo="Typo.subtitle2">Neues Placement hinzufügen</MudText>
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudTextField @bind-Value="newTitle" Label="Titel" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudTextField @bind-Value="newDescription" Label="Beschreibung" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudButton OnClick="Add" Variant="Variant.Filled" Color="Color.Primary">Hinzufügen</MudButton>
+        </MudItem>
+    </MudGrid>
+
+    <MudDivider Class="my-2" />
+    <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+        <MudButton Variant="Variant.Text" OnClick="Cancel">Abbrechen</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">Speichern</MudButton>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter] public CreatorProfile? Creator { get; set; }
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private string newTitle = string.Empty;
+    private string newDescription = string.Empty;
+
+    private void Add()
+    {
+        if (Creator == null) return;
+        Creator.Placements ??= new List<CreatorPlacement>();
+        Creator.Placements.Add(new CreatorPlacement { Id = Guid.NewGuid().ToString(), PlacementName = newTitle, PlacementUrl = newDescription });
+        newTitle = string.Empty; newDescription = string.Empty;
+    }
+
+    private void Remove(CreatorPlacement p) => Creator?.Placements?.Remove(p);
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Save()
+    {
+        if (Creator == null) return;
+        var result = await ClientApiService.UpdateAsync("api/creatorprofile", Creator.Id, Creator);
+        if (result != null) MudDialog.Close(DialogResult.Ok(true));
+        else Snackbar.Add("Fehler beim Speichern", Severity.Error);
+    }
+}

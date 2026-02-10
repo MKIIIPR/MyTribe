@@ -237,5 +237,110 @@ namespace Tribe.Controller.ShopController
                 return StatusCode(500, new { error = "Internal server error" });
             }
         }
+
+        /// <summary>
+        /// Update own creator profile (requires authentication)
+        /// </summary>
+        [HttpPut("profile")]
+        public async Task<IActionResult> UpdateCreatorProfile([FromBody] UpdateCreatorProfileDto dto)
+        {
+            try
+            {
+                // Get current user's profile ID from claims
+                var profileId = User.FindFirst("profileId")?.Value;
+                if (string.IsNullOrEmpty(profileId))
+                {
+                    return Unauthorized(new { error = "Nicht authentifiziert" });
+                }
+
+                var creatorProfile = await _context.CreatorProfiles.FindAsync(profileId);
+                if (creatorProfile == null)
+                {
+                    return NotFound(new { error = "CreatorProfile nicht gefunden" });
+                }
+
+                // Prüfe ob der neue CreatorName bereits vergeben ist (falls geändert)
+                if (!string.IsNullOrEmpty(dto.CreatorName) && dto.CreatorName != creatorProfile.CreatorName)
+                {
+                    var nameExists = await _context.CreatorProfiles
+                        .AnyAsync(cp => cp.CreatorName == dto.CreatorName && cp.Id != profileId);
+
+                    if (nameExists)
+                    {
+                        return BadRequest(new { error = "Dieser Creator-Name ist bereits vergeben" });
+                    }
+
+                    creatorProfile.CreatorName = dto.CreatorName;
+                }
+
+                // Update other fields
+                if (dto.BannerUrl != null) creatorProfile.BannerUrl = dto.BannerUrl;
+                if (dto.ImageTemplateUrl != null) creatorProfile.ImageTemplateUrl = dto.ImageTemplateUrl;
+                if (dto.AcceptingCollaborations.HasValue) creatorProfile.AcceptingCollaborations = dto.AcceptingCollaborations.Value;
+                if (dto.CollaborationInfo != null) creatorProfile.CollaborationInfo = dto.CollaborationInfo;
+
+                // Social Links
+                if (dto.PatreonUrl != null) creatorProfile.PatreonUrl = dto.PatreonUrl;
+                if (dto.YouTubeUrl != null) creatorProfile.YouTubeUrl = dto.YouTubeUrl;
+                if (dto.TwitchUrl != null) creatorProfile.TwitchUrl = dto.TwitchUrl;
+                if (dto.TwitterUrl != null) creatorProfile.TwitterUrl = dto.TwitterUrl;
+                if (dto.InstagramUrl != null) creatorProfile.InstagramUrl = dto.InstagramUrl;
+                if (dto.TikTokUrl != null) creatorProfile.TikTokUrl = dto.TikTokUrl;
+                if (dto.DiscordUrl != null) creatorProfile.DiscordUrl = dto.DiscordUrl;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("CreatorProfile updated for {ProfileId}", profileId);
+
+                return Ok(new { message = "Profil erfolgreich aktualisiert" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating creator profile");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+        /// <summary>
+        /// Check if a creator name is available
+        /// </summary>
+        [HttpGet("name-available/{creatorName}")]
+        public async Task<IActionResult> CheckCreatorNameAvailable(string creatorName)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(creatorName) || creatorName.Length < 3)
+                {
+                    return BadRequest(new { available = false, error = "Name muss mindestens 3 Zeichen lang sein" });
+                }
+
+                var exists = await _context.CreatorProfiles.AnyAsync(cp => cp.CreatorName == creatorName);
+                return Ok(new { available = !exists });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking creator name availability");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+    }
+
+    /// <summary>
+    /// DTO for updating creator profile
+    /// </summary>
+    public class UpdateCreatorProfileDto
+    {
+        public string? CreatorName { get; set; }
+        public string? BannerUrl { get; set; }
+        public string? ImageTemplateUrl { get; set; }
+        public bool? AcceptingCollaborations { get; set; }
+        public string? CollaborationInfo { get; set; }
+        public string? PatreonUrl { get; set; }
+        public string? YouTubeUrl { get; set; }
+        public string? TwitchUrl { get; set; }
+        public string? TwitterUrl { get; set; }
+        public string? InstagramUrl { get; set; }
+        public string? TikTokUrl { get; set; }
+        public string? DiscordUrl { get; set; }
     }
 }

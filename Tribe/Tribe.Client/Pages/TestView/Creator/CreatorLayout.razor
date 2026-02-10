@@ -1,0 +1,208 @@
+@using MudBlazor
+@using Microsoft.AspNetCore.Components.Authorization
+@using Tribe.Services.ClientServices.ShopServices
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ICreatorProfileClientService CreatorProfileService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudLayout>
+    <!-- App Bar -->
+    <MudAppBar Elevation="1" Dense="true" Color="Color.Surface">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" 
+                       OnClick="@ToggleDrawer" />
+        <MudText Typo="Typo.h6" Class="ml-3">Creator Studio</MudText>
+        <MudSpacer />
+        
+        @if (_creatorProfile != null)
+        {
+            <MudChip T="string" Color="Color.Primary" Size="Size.Small" Class="mr-2">
+                @_creatorProfile.CreatorName
+            </MudChip>
+        }
+        
+        <MudIconButton Icon="@Icons.Material.Filled.Storefront" Color="Color.Inherit" 
+                       Href="@GetPublicShopUrl()" Target="_blank" Title="Shop öffnen" />
+        <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" />
+        <MudMenu Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Inherit" AnchorOrigin="Origin.BottomRight">
+            <MudMenuItem Href="/Account/Manage" Icon="@Icons.Material.Filled.Person">Profil</MudMenuItem>
+            <MudMenuItem Href="/" Icon="@Icons.Material.Filled.Home">Zur Startseite</MudMenuItem>
+            <MudDivider />
+            <MudMenuItem Href="/Account/Logout" Icon="@Icons.Material.Filled.Logout">Abmelden</MudMenuItem>
+        </MudMenu>
+    </MudAppBar>
+
+    <!-- Sidebar Navigation -->
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2" Variant="DrawerVariant.Mini"
+               OpenMiniOnHover="true" Width="280px" MiniWidth="70px">
+        <MudDrawerHeader Class="pa-4">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                @if (_creatorProfile != null && !string.IsNullOrEmpty(_creatorProfile.AvatarUrl))
+                {
+                    <MudAvatar Size="Size.Medium" Image="@_creatorProfile.AvatarUrl" />
+                }
+                else
+                {
+                    <MudAvatar Size="Size.Medium" Color="Color.Primary">
+                        <MudIcon Icon="@Icons.Material.Filled.Person" />
+                    </MudAvatar>
+                }
+                <MudStack Spacing="0" Class="overflow-hidden">
+                    <MudText Typo="Typo.subtitle2" Class="text-truncate">@(_creatorProfile?.DisplayName ?? "Creator")</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-truncate">
+                        @(_creatorProfile?.CreatorName ?? "Nicht konfiguriert")
+                    </MudText>
+                </MudStack>
+            </MudStack>
+        </MudDrawerHeader>
+
+        <MudDivider />
+
+        <MudNavMenu Bordered="true" Color="Color.Primary" Class="pa-2">
+            <!-- Hauptbereich -->
+            <MudText Typo="Typo.overline" Class="px-4 mt-2 mb-1" Color="Color.Secondary">HAUPTMENÜ</MudText>
+            
+            <MudNavLink Href="/testview/creator" Match="NavLinkMatch.All"
+                        Icon="@Icons.Material.Filled.Dashboard">
+                Dashboard
+            </MudNavLink>
+            
+            <MudNavLink Href="/testview/creator/profile" Match="NavLinkMatch.Prefix"
+                        Icon="@Icons.Material.Filled.Person">
+                Profil
+            </MudNavLink>
+
+            <!-- Shop & Produkte -->
+            <MudText Typo="Typo.overline" Class="px-4 mt-4 mb-1" Color="Color.Secondary">SHOP</MudText>
+            
+            <MudNavLink Href="/testview/creator/shop" Match="NavLinkMatch.Prefix"
+                        Icon="@Icons.Material.Filled.ShoppingBag">
+                Produkte
+            </MudNavLink>
+            
+            <MudNavLink Href="/testview/creator/raffles" Match="NavLinkMatch.Prefix"
+                        Icon="@Icons.Material.Filled.EmojiEvents">
+                Raffles
+            </MudNavLink>
+            
+            <MudNavLink Href="/testview/creator/orders" Match="NavLinkMatch.Prefix"
+                        Icon="@Icons.Material.Filled.Receipt">
+                Bestellungen
+            </MudNavLink>
+
+            <!-- Community -->
+            <MudText Typo="Typo.overline" Class="px-4 mt-4 mb-1" Color="Color.Secondary">COMMUNITY</MudText>
+            
+            <MudNavLink Href="/testview/creator/tokens" Match="NavLinkMatch.Prefix"
+                        Icon="@Icons.Material.Filled.Token">
+                Tokens
+            </MudNavLink>
+            
+            <MudNavLink Href="/testview/creator/partners" Match="NavLinkMatch.Prefix"
+                        Icon="@Icons.Material.Filled.Handshake">
+                Partner
+            </MudNavLink>
+
+            <!-- Einstellungen -->
+            <MudText Typo="Typo.overline" Class="px-4 mt-4 mb-1" Color="Color.Secondary">EINSTELLUNGEN</MudText>
+            
+            <MudNavLink Href="/testview/creator/settings" Match="NavLinkMatch.Prefix"
+                        Icon="@Icons.Material.Filled.Settings">
+                Einstellungen
+            </MudNavLink>
+        </MudNavMenu>
+
+        <MudSpacer />
+
+        <!-- Footer Info -->
+        <MudStack Class="pa-4" Spacing="1">
+            @if (_creatorProfile != null)
+            {
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Follower</MudText>
+                    <MudText Typo="Typo.caption">@_creatorProfile.FollowerCount</MudText>
+                </MudStack>
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Raffles</MudText>
+                    <MudText Typo="Typo.caption">@_creatorProfile.TotalRaffles</MudText>
+                </MudStack>
+            }
+        </MudStack>
+    </MudDrawer>
+
+    <!-- Main Content -->
+    <MudMainContent Class="pt-16 px-4 pb-4" Style="min-height: 100vh; background: var(--mud-palette-background-grey);">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4">
+            @if (_isLoading)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+            }
+            else if (_creatorProfile == null)
+            {
+                <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Class="mb-4">
+                    <MudText>Du bist noch kein Creator. Schließe ein Creator-Abonnement ab, um loszulegen.</MudText>
+                    <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/" Class="mt-2">
+                        Zurück zur Startseite
+                    </MudButton>
+                </MudAlert>
+            }
+            else
+            {
+                <CascadingValue Value="_creatorProfile" Name="CreatorProfile">
+                    <CascadingValue Value="_profileId" Name="ProfileId">
+                        @ChildContent
+                    </CascadingValue>
+                </CascadingValue>
+            }
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private bool _drawerOpen = true;
+    private bool _isLoading = true;
+    private string? _profileId;
+    private CreatorProfileDto? _creatorProfile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCreatorProfileAsync();
+    }
+
+    private async Task LoadCreatorProfileAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            var auth = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = auth.User;
+            _profileId = user.FindFirst("profileId")?.Value;
+
+            if (!string.IsNullOrEmpty(_profileId))
+            {
+                _creatorProfile = await CreatorProfileService.GetCreatorProfileAsync(_profileId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CreatorLayout] Error loading profile: {ex.Message}");
+            Snackbar.Add("Fehler beim Laden des Profils", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private string GetPublicShopUrl()
+    {
+        if (_creatorProfile?.CreatorName != null)
+            return $"/{_creatorProfile.CreatorName}/shop";
+        return "/";
+    }
+}

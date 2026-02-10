@@ -91,6 +91,23 @@
                     Lines="3"
                     Variant="Variant.Outlined"
                     MaxLength="1000" />
+                <!-- Bild für Raffle -->
+                <MudText Typo="Typo.subtitle2" Class="mt-2">Bild (optional)</MudText>
+                @if (!string.IsNullOrEmpty(Raffle.ImageUrl))
+                {
+                    <MudPaper Elevation="1" Class="pa-2 mb-2 d-flex align-center justify-between">
+                        <div>
+                            <MudImage Src="@Raffle.ImageUrl" Width="200" Height="120" Alt="Raffle Bild" />
+                        </div>
+                        <div>
+                            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="RemoveImage">Bild entfernen</MudButton>
+                        </div>
+                    </MudPaper>
+                }
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Du kannst ein Bild hochladen oder aus der Zwischenablage einfügen.</MudText>
+                <div class="mt-2">
+                    <Tribe.Ui.Components.FileUploader OnImageUploaded="HandleImageUpload" PasteFunc="true" />
+                </div>
             </MudStack>
         </MudForm>
     </DialogContent>
@@ -171,4 +188,16 @@
     }
 
     private void Cancel() => MudDialog.Cancel();
+
+    private void HandleImageUpload(string base64Image)
+    {
+        // base64 string assigned to Raffle.ImageUrl
+        Raffle.ImageUrl = base64Image;
+        StateHasChanged();
+    }
+
+    private void RemoveImage()
+    {
+        Raffle.ImageUrl = null;
+    }
 }

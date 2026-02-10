@@ -11,59 +11,170 @@
 
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
     <MudPaper Class="pa-6" Elevation="2">
-        <MudText Typo="Typo.h5">Warenkorb</MudText>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Size="Size.Large" Color="Color.Primary" />
+            <MudText Typo="Typo.h5">Warenkorb</MudText>
+            <MudSpacer />
+            @if (ShopService.Cart.Items.Count > 0)
+            {
+                <MudChip T="string" Color="Color.Primary" Size="Size.Small">@ShopService.Cart.TotalItems Artikel</MudChip>
+            }
+        </MudStack>
 
         @if (ShopService.Cart.Items.Count == 0)
         {
-            <MudAlert Severity="Severity.Info" Class="mt-4">Ihr Warenkorb ist leer</MudAlert>
-            <MudButton OnClick="@(() => Navigation.NavigateTo("/"))" Class="mt-4">
+            <MudAlert Severity="Severity.Info" Class="mt-4" Icon="@Icons.Material.Filled.ShoppingCartCheckout">
+                Ihr Warenkorb ist leer
+            </MudAlert>
+            <MudButton OnClick="@(() => Navigation.NavigateTo("/"))" Class="mt-4" 
+                       Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Store">
                 Zum Shop
             </MudButton>
         }
         else
         {
-            <MudTable Items="ShopService.Cart.Items" Class="mt-4">
-                <HeaderContent>
-                    <MudTh>Produkt</MudTh>
-                    <MudTh>Preis</MudTh>
-                    <MudTh>Menge</MudTh>
-                    <MudTh>Gesamt</MudTh>
-                    <MudTh></MudTh>
-                </HeaderContent>
-                <RowTemplate Context="context">
-                    <MudTd>@context.ProductTitle</MudTd>
-                    <MudTd>�@context.Price.ToString("F2")</MudTd>
-                    <MudTd>
-                        <MudNumericField T="int" @bind-Value="context.Quantity" Min="1" 
-                                        OnChange="@((int val) => ShopService.UpdateCartQuantity(context.ProductId, val))" />
-                    </MudTd>
-                    <MudTd>�@context.TotalPrice.ToString("F2")</MudTd>
-                    <MudTd>
-                        <MudButton Size="Size.Small" Color="Color.Error" 
-                                  OnClick="@(() => ShopService.RemoveFromCart(context.ProductId))">
-                            Entfernen
-                        </MudButton>
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
+            <!-- Warenkorb-Artikel -->
+            <MudStack Spacing="3">
+                @foreach (var item in ShopService.Cart.Items)
+                {
+                    <MudPaper Elevation="1" Class="pa-3">
+                        <MudGrid AlignItems="Center">
+                            <!-- Produktbild -->
+                            <MudItem xs="2" sm="2">
+                                @if (!string.IsNullOrEmpty(item.ThumbnailUrl))
+                                {
+                                    <MudImage Src="@item.ThumbnailUrl" Width="80" Height="80" 
+                                              ObjectFit="ObjectFit.Cover" Class="rounded" />
+                                }
+                                else
+                                {
+                                    <MudPaper Elevation="0" Class="d-flex align-center justify-center rounded" 
+                                              Style="width: 80px; height: 80px; background: #f5f5f5;">
+                                        <MudIcon Icon="@Icons.Material.Filled.Image" Color="Color.Secondary" />
+                                    </MudPaper>
+                                }
+                            </MudItem>
+                            
+                            <!-- Produktinfos -->
+                            <MudItem xs="4" sm="4">
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">@item.ProductTitle</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@item.ProductType</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Primary">€@item.Price.ToString("F2")</MudText>
+                                </MudStack>
+                            </MudItem>
+                            
+                            <!-- Menge -->
+                            <MudItem xs="2" sm="2">
+                                <MudNumericField T="int" Value="item.Quantity" Min="1" Max="99"
+                                                 ValueChanged="@((int val) => UpdateQuantity(item.ProductId, val))"
+                                                 Variant="Variant.Outlined" Dense="true" 
+                                                 Style="max-width: 80px;" />
+                            </MudItem>
+                            
+                            <!-- Zwischensumme -->
+                            <MudItem xs="2" sm="2">
+                                <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">
+                                    €@item.TotalPrice.ToString("F2")
+                                </MudText>
+                            </MudItem>
+                            
+                            <!-- Entfernen -->
+                            <MudItem xs="2" sm="2" Class="text-right">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                               OnClick="@(() => RemoveItem(item.ProductId))" />
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                }
+            </MudStack>
 
-            <MudStack Spacing="2" Class="mt-6">
-                <MudText Typo="Typo.h6">
-                    Gesamtbetrag: <strong>�@ShopService.Cart.TotalAmount.ToString("F2")</strong>
-                </MudText>
+            <MudDivider Class="my-4" />
 
-                <MudTextField T="string" @bind-Value="_customerEmail" Label="E-Mail *" Required="true" />
-                <MudTextField T="string" @bind-Value="_customerName" Label="Name *" Required="true" />
-                <MudTextField T="string" @bind-Value="_customerPhone" Label="Telefon" />
-
-                <MudStack Row="true" Spacing="2" Class="mt-4">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Checkout">
-                        Zur Kasse
-                    </MudButton>
-                    <MudButton Variant="Variant.Text" OnClick="@(() => Navigation.NavigateTo("/"))">
-                        Weiter Einkaufen
-                    </MudButton>
+            <!-- Zusammenfassung -->
+            <MudPaper Elevation="1" Class="pa-4" Style="background: #fafafa;">
+                <MudStack Spacing="2">
+                    <!-- Zwischensumme -->
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body1">Zwischensumme</MudText>
+                        <MudText Typo="Typo.body1">€@Subtotal.ToString("F2")</MudText>
+                    </MudStack>
+                    
+                    <!-- Versandkosten -->
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Size="Size.Small" Color="Color.Secondary" />
+                            <MudText Typo="Typo.body1">Versandkosten</MudText>
+                        </MudStack>
+                        @if (ShippingCost == 0)
+                        {
+                            <MudText Typo="Typo.body1" Color="Color.Success">Kostenlos</MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body1">€@ShippingCost.ToString("F2")</MudText>
+                        }
+                    </MudStack>
+                    
+                    @if (HasPhysicalProducts && Subtotal < FreeShippingThreshold && ShippingCost > 0)
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true" Class="mt-2">
+                            <MudText Typo="Typo.caption">
+                                Noch €@((FreeShippingThreshold - Subtotal).ToString("F2")) bis zum kostenlosen Versand!
+                            </MudText>
+                        </MudAlert>
+                    }
+                    
+                    <MudDivider Class="my-2" />
+                    
+                    <!-- Gesamtsumme -->
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.h6">Gesamtsumme</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Style="font-weight: 700;">
+                            €@TotalAmount.ToString("F2")
+                        </MudText>
+                    </MudStack>
+                    
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">inkl. MwSt.</MudText>
                 </MudStack>
+            </MudPaper>
+
+            <MudDivider Class="my-4" />
+
+            <!-- Kundendaten -->
+            <MudText Typo="Typo.h6" Class="mb-3">Kontaktdaten</MudText>
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="_customerEmail" Label="E-Mail *" Required="true" 
+                                  Variant="Variant.Outlined" InputType="InputType.Email" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="_customerName" Label="Name *" Required="true" 
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="_customerPhone" Label="Telefon" 
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+
+            <MudStack Row="true" Spacing="2" Class="mt-6" Justify="Justify.FlexEnd">
+                <MudButton Variant="Variant.Text" OnClick="@(() => Navigation.NavigateTo("/"))"
+                           StartIcon="@Icons.Material.Filled.ArrowBack">
+                    Weiter Einkaufen
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Checkout"
+                           Disabled="_isProcessing" StartIcon="@Icons.Material.Filled.Payment">
+                    @if (_isProcessing)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Wird verarbeitet...</span>
+                    }
+                    else
+                    {
+                        <span>Zur Kasse (€@TotalAmount.ToString("F2"))</span>
+                    }
+                </MudButton>
             </MudStack>
         }
     </MudPaper>
@@ -74,6 +185,44 @@
     private string _customerName = "";
     private string _customerPhone = "";
     private bool _isProcessing = false;
+
+    // Versandkonfiguration
+    private const decimal BaseShippingCost = 4.99m;
+    private const decimal FreeShippingThreshold = 50.00m;
+
+    private decimal Subtotal => ShopService.Cart.TotalAmount;
+
+    private bool HasPhysicalProducts => ShopService.Cart.Items.Any(i => 
+        i.ProductType == nameof(PhysicalProduct) || i.ProductType == "PhysicalProduct");
+
+    private decimal ShippingCost
+    {
+        get
+        {
+            // Nur bei physischen Produkten Versand berechnen
+            if (!HasPhysicalProducts) return 0;
+            
+            // Kostenloser Versand ab Schwellwert
+            if (Subtotal >= FreeShippingThreshold) return 0;
+            
+            return BaseShippingCost;
+        }
+    }
+
+    private decimal TotalAmount => Subtotal + ShippingCost;
+
+    private void UpdateQuantity(string productId, int quantity)
+    {
+        ShopService.UpdateCartQuantity(productId, quantity);
+        StateHasChanged();
+    }
+
+    private void RemoveItem(string productId)
+    {
+        ShopService.RemoveFromCart(productId);
+        Snackbar.Add("Artikel entfernt", Severity.Info);
+        StateHasChanged();
+    }
 
     private async Task Checkout()
     {
@@ -92,6 +241,7 @@
         try
         {
             _isProcessing = true;
+            StateHasChanged();
 
             var order = new ShopOrder
             {
@@ -99,7 +249,8 @@
                 CustomerName = _customerName,
                 CustomerPhone = _customerPhone,
                 CustomerUserId = Guid.NewGuid().ToString(), // In production: get from auth
-                TotalAmount = ShopService.Cart.TotalAmount,
+                TotalAmount = TotalAmount,
+                ShippingAmount = ShippingCost,
                 CreatorProfileId = "" // Set from product creator
             };
 

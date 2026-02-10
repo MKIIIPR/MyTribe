@@ -1,0 +1,343 @@
+@page "/testview/creator/raffles"
+@using MudBlazor
+@using Tribe.Services.ClientServices.ShopServices
+@using Tribe.Bib.Models.TribeRelated
+@inject IRaffleClientService RaffleService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<TestView.Creator.CreatorLayout>
+    <!-- Page Header -->
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-6">
+        <MudStack Spacing="0">
+            <MudBreadcrumbs Items="_breadcrumbs" Class="pa-0" />
+            <MudText Typo="Typo.h4">Raffles</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Erstelle Gewinnspiele und Verlosungen für deine Community.
+            </MudText>
+        </MudStack>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="CreateRaffle">
+            Neues Raffle
+        </MudButton>
+    </MudStack>
+
+    <!-- Stats Cards -->
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudText Typo="Typo.h5" Color="Color.Success">@_raffles.Count(r => r.Status?.ToLower() == "active")</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Aktiv</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudText Typo="Typo.h5" Color="Color.Warning">@_raffles.Count(r => r.Status?.ToLower() == "ended")</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Beendet</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudText Typo="Typo.h5" Color="Color.Info">@_raffles.Count(r => r.Status?.ToLower() == "drawn")</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Ausgelost</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="0" Class="pa-3 rounded-lg text-center" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudText Typo="Typo.h5">@_raffles.Sum(r => r.CurrentEntries)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Teilnahmen gesamt</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Tabs for different views -->
+    <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-0 mt-4">
+        <MudTabPanel Text="Alle" BadgeData="@_raffles.Count" BadgeColor="Color.Primary">
+            @RenderRaffleList(_raffles)
+        </MudTabPanel>
+        <MudTabPanel Text="Aktiv" BadgeData="@_raffles.Count(r => r.Status?.ToLower() == "active")" BadgeColor="Color.Success">
+            @RenderRaffleList(_raffles.Where(r => r.Status?.ToLower() == "active"))
+        </MudTabPanel>
+        <MudTabPanel Text="Beendet" BadgeData="@_raffles.Count(r => r.Status?.ToLower() == "ended")" BadgeColor="Color.Warning">
+            @RenderRaffleList(_raffles.Where(r => r.Status?.ToLower() == "ended"))
+        </MudTabPanel>
+        <MudTabPanel Text="Ausgelost" BadgeData="@_raffles.Count(r => r.Status?.ToLower() == "drawn")" BadgeColor="Color.Info">
+            @RenderRaffleList(_raffles.Where(r => r.Status?.ToLower() == "drawn"))
+        </MudTabPanel>
+    </MudTabs>
+</TestView.Creator.CreatorLayout>
+
+@code {
+    [CascadingParameter(Name = "ProfileId")]
+    private string? _profileId { get; set; }
+
+    private List<Raffle> _raffles = new();
+    private bool _isLoading = true;
+
+    private List<BreadcrumbItem> _breadcrumbs = new()
+    {
+        new BreadcrumbItem("Dashboard", "/testview/creator"),
+        new BreadcrumbItem("Raffles", null, disabled: true)
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRafflesAsync();
+    }
+
+    private async Task LoadRafflesAsync()
+    {
+        _isLoading = true;
+        try
+        {
+            _raffles = await RaffleService.GetCreatorRafflesAsync() ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Fehler beim Laden: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private RenderFragment RenderRaffleList(IEnumerable<Raffle> raffles) => __builder =>
+    {
+        if (_isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else if (!raffles.Any())
+        {
+            <MudPaper Elevation="0" Class="pa-8 rounded-lg text-center" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Size="Size.Large" Color="Color.Secondary" />
+                <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mt-2">Keine Raffles gefunden</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                    Erstelle ein Raffle, um deine Community zu begeistern!
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="CreateRaffle">
+                    Raffle erstellen
+                </MudButton>
+            </MudPaper>
+        }
+        else
+        {
+            <MudGrid Spacing="4">
+                @foreach (var raffle in raffles)
+                {
+                    <MudItem xs="12" md="6" lg="4">
+                        <MudCard Elevation="0" Style="border: 1px solid var(--mud-palette-lines-default);">
+                            <MudCardHeader>
+                                <CardHeaderAvatar>
+                                    <MudAvatar Color="@GetRaffleStatusColor(raffle.Status)" Variant="Variant.Outlined">
+                                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" />
+                                    </MudAvatar>
+                                </CardHeaderAvatar>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 600;">@raffle.Title</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="@GetRaffleStatusColor(raffle.Status)">
+                                        @GetStatusText(raffle.Status)
+                                    </MudChip>
+                                </CardHeaderContent>
+                                <CardHeaderActions>
+                                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" AnchorOrigin="Origin.BottomRight">
+                                        <MudMenuItem Icon="@Icons.Material.Filled.Edit" OnClick="@(() => EditRaffle(raffle))">
+                                            Bearbeiten
+                                        </MudMenuItem>
+                                        <MudMenuItem Icon="@Icons.Material.Filled.People" OnClick="@(() => ViewParticipants(raffle))">
+                                            Teilnehmer
+                                        </MudMenuItem>
+                                        @if (raffle.Status?.ToLower() == "active")
+                                        {
+                                            <MudMenuItem Icon="@Icons.Material.Filled.Stop" OnClick="@(() => EndRaffle(raffle))">
+                                                Beenden
+                                            </MudMenuItem>
+                                        }
+                                        @if (raffle.Status?.ToLower() == "ended")
+                                        {
+                                            <MudMenuItem Icon="@Icons.Material.Filled.Casino" OnClick="@(() => DrawWinner(raffle))">
+                                                Auslosen
+                                            </MudMenuItem>
+                                        }
+                                        <MudDivider />
+                                        <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error" OnClick="@(() => DeleteRaffle(raffle))">
+                                            Löschen
+                                        </MudMenuItem>
+                                    </MudMenu>
+                                </CardHeaderActions>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                                    @(raffle.PrizeDescription ?? "Kein Preis angegeben")
+                                </MudText>
+                                
+                                <!-- Progress Bar -->
+                                <MudStack Spacing="1" Class="mb-3">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Teilnehmer</MudText>
+                                        <MudText Typo="Typo.caption">@raffle.CurrentEntries / @raffle.MaxEntries</MudText>
+                                    </MudStack>
+                                    <MudProgressLinear Value="@GetProgress(raffle)" Color="@GetRaffleStatusColor(raffle.Status)" 
+                                                       Rounded="true" Size="Size.Small" />
+                                </MudStack>
+                                
+                                <!-- Date Info -->
+                                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                    <MudStack Spacing="0">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Start</MudText>
+                                        <MudText Typo="Typo.body2">@FormatDate(raffle.StartDate)</MudText>
+                                    </MudStack>
+                                    <MudStack Spacing="0" AlignItems="AlignItems.End">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Ende</MudText>
+                                        <MudText Typo="Typo.body2">@FormatDate(raffle.EndDate)</MudText>
+                                    </MudStack>
+                                </MudStack>
+                            </MudCardContent>
+                            <MudCardActions>
+                                <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit"
+                                           OnClick="@(() => EditRaffle(raffle))">
+                                    Bearbeiten
+                                </MudButton>
+                                <MudSpacer />
+                                <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.OpenInNew"
+                                           Href="@($"/raffle/{raffle.Id}")" Target="_blank">
+                                    Vorschau
+                                </MudButton>
+                            </MudCardActions>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    };
+
+    private async Task CreateRaffle()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<Tribe.Ui.Pages.UserDashboard.CreatorRaffle.RaffleEditDialog>(
+            "Neues Raffle", options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            await LoadRafflesAsync();
+        }
+    }
+
+    private async Task EditRaffle(Raffle raffle)
+    {
+        var parameters = new DialogParameters { ["Raffle"] = raffle };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<Tribe.Ui.Pages.UserDashboard.CreatorRaffle.RaffleEditDialog>(
+            "Raffle bearbeiten", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            await LoadRafflesAsync();
+        }
+    }
+
+    private async Task ViewParticipants(Raffle raffle)
+    {
+        // TODO: Implementiere Teilnehmer-Ansicht
+        Snackbar.Add("Teilnehmer-Ansicht kommt bald!", Severity.Info);
+    }
+
+    private async Task EndRaffle(Raffle raffle)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Raffle beenden",
+            $"Möchtest du '{raffle.Title}' wirklich beenden? Es können dann keine neuen Teilnahmen mehr erfolgen.",
+            "Beenden", "Abbrechen");
+
+        if (confirm == true)
+        {
+            try
+            {
+                // TODO: API-Call zum Beenden
+                Snackbar.Add("Raffle beendet", Severity.Success);
+                await LoadRafflesAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task DrawWinner(Raffle raffle)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Gewinner auslosen",
+            $"Möchtest du jetzt den Gewinner für '{raffle.Title}' auslosen?",
+            "Auslosen", "Abbrechen");
+
+        if (confirm == true)
+        {
+            try
+            {
+                // TODO: API-Call zum Auslosen
+                Snackbar.Add("Gewinner ausgelost!", Severity.Success);
+                await LoadRafflesAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task DeleteRaffle(Raffle raffle)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Raffle löschen",
+            $"Möchtest du '{raffle.Title}' wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+            "Löschen", "Abbrechen");
+        
+        if (confirm == true)
+        {
+            try
+            {
+                await RaffleService.DeleteRaffleAsync(raffle.Id);
+                Snackbar.Add("Raffle gelöscht", Severity.Success);
+                await LoadRafflesAsync();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Fehler: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private double GetProgress(Raffle raffle)
+    {
+        if (raffle.MaxEntries <= 0) return 0;
+        return (double)raffle.CurrentEntries / raffle.MaxEntries * 100;
+    }
+
+    private string FormatDate(DateTime? date)
+    {
+        return date?.ToLocalTime().ToString("dd.MM.yyyy") ?? "—";
+    }
+
+    private string GetStatusText(string? status) => status?.ToLower() switch
+    {
+        "active" => "Aktiv",
+        "ended" => "Beendet",
+        "drawn" => "Ausgelost",
+        "cancelled" => "Abgebrochen",
+        _ => status ?? "Unbekannt"
+    };
+
+    private Color GetRaffleStatusColor(string? status) => status?.ToLower() switch
+    {
+        "active" => Color.Success,
+        "ended" => Color.Warning,
+        "drawn" => Color.Info,
+        "cancelled" => Color.Error,
+        _ => Color.Default
+    };
+}

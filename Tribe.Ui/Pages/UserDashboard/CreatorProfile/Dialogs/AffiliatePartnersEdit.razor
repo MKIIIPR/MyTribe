@@ -1,0 +1,76 @@
+@using MudBlazor
+@using Tribe.Bib.Models.TribeRelated
+@using Tribe.Client.Services
+@inject IClientApiService ClientApiService
+@inject ISnackbar Snackbar
+
+<MudPaper Class="pa-4">
+    <MudText Typo="Typo.h6">Affiliate Partner</MudText>
+    <MudDivider Class="my-2" />
+
+    <MudStack Spacing="2">
+        @if (Creator?.AffiliatePartners != null)
+        {
+            @foreach (var partner in Creator.AffiliatePartners)
+            {
+                <MudPaper Class="pa-2 d-flex align-center justify-between">
+                    <div>
+                        <div><strong>@partner.PartneName</strong></div>
+                        <div class="mud-text-caption">@partner.PartnerUrl</div>
+                    </div>
+                    <div>
+                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => Remove(partner)">Entfernen</MudButton>
+                    </div>
+                </MudPaper>
+            }
+        }
+    </MudStack>
+
+    <MudDivider Class="my-2" />
+    <MudText Typo="Typo.subtitle2">Neuen Partner hinzufügen</MudText>
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudTextField @bind-Value="newName" Label="Name" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudTextField @bind-Value="newUrl" Label="URL" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudButton OnClick="Add" Variant="Variant.Filled" Color="Color.Primary">Hinzufügen</MudButton>
+        </MudItem>
+    </MudGrid>
+
+    <MudDivider Class="my-2" />
+    <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+        <MudButton Variant="Variant.Text" OnClick="Cancel">Abbrechen</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">Speichern</MudButton>
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter] public CreatorProfile? Creator { get; set; }
+    [CascadingParameter] public IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private string newName = string.Empty;
+    private string newUrl = string.Empty;
+
+    private void Add()
+    {
+        if (Creator == null) return;
+        Creator.AffiliatePartners ??= new List<AffiliatePartner>();
+        Creator.AffiliatePartners.Add(new AffiliatePartner { Id = Guid.NewGuid().ToString(), PartneName = newName, PartnerUrl = newUrl });
+        newName = string.Empty; newUrl = string.Empty;
+    }
+
+    private void Remove(AffiliatePartner partner) => Creator?.AffiliatePartners?.Remove(partner);
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Save()
+    {
+        if (Creator == null) return;
+        var result = await ClientApiService.UpdateAsync("api/creatorprofile", Creator.Id, Creator);
+        if (result != null) MudDialog.Close(DialogResult.Ok(true));
+        else Snackbar.Add("Fehler beim Speichern", Severity.Error);
+    }
+}

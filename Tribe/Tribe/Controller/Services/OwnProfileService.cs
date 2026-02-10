@@ -218,7 +218,27 @@ namespace Tribe.Controller.Services
             {
                 if (existingProfile == null)
                 {
-                    _context.CreatorProfiles.Add(new CreatorProfile { Id = userId });
+                    // Hole den TribeUser um den DisplayName als initialen CreatorName zu setzen
+                    var tribeUser = await _context.TribeUsers.FindAsync(userId);
+                    var initialCreatorName = tribeUser?.DisplayName ?? $"Creator_{userId.Substring(0, 8)}";
+
+                    // Stelle sicher, dass der CreatorName unique ist
+                    var baseName = initialCreatorName;
+                    var counter = 1;
+                    while (await _context.CreatorProfiles.AnyAsync(cp => cp.CreatorName == initialCreatorName))
+                    {
+                        initialCreatorName = $"{baseName}{counter}";
+                        counter++;
+                    }
+
+                    _context.CreatorProfiles.Add(new CreatorProfile 
+                    { 
+                        Id = userId,
+                        CreatorName = initialCreatorName
+                    });
+
+                    _logger.LogInformation("CreatorProfile erstellt für User {UserId} mit CreatorName: {CreatorName}", 
+                        userId, initialCreatorName);
                 }
             }
             else if (existingProfile != null)

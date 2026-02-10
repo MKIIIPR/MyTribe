@@ -1,8 +1,14 @@
 ﻿@using MudBlazor
+@using Tribe.Ui.Pages.UserDashboard.CreatorProfile.Dialogs
+@using Tribe.Ui.Pages.UserDashboard.CreatorRaffle
 @using Tribe.Client.Services
+@using Tribe.Services.ClientServices.ShopServices
+@using System
 @using System.ComponentModel.DataAnnotations
 @inject IClientApiService ClientApiService
+@inject ICreatorProfileClientService CreatorProfileService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <MudCard>
     <MudCardHeader>
@@ -10,21 +16,33 @@
             <MudText Typo="Typo.h5">Creator Profil bearbeiten</MudText>
         </CardHeaderContent>
         <CardHeaderActions>
-            <MudButton Color="Color.Success" Variant="Variant.Filled" StartIcon="Icons.Material.Filled.Save" OnClick="SaveProfile" Disabled="isLoading">
-                @if (isLoading)
-                {
-                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                    <MudText Class="ms-2">Speichern...</MudText>
-                }
-                else
-                {
-                    <MudText>Speichern</MudText>
-                }
-            </MudButton>
+            @if (CreatorProfile != null)
+            {
+                <MudButton Color="Color.Success" Variant="Variant.Filled" StartIcon="Icons.Material.Filled.Save" OnClick="SaveProfile" Disabled="isLoading">
+                    @if (isLoading)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">Speichern...</MudText>
+                    }
+                    else
+                    {
+                        <MudText>Speichern</MudText>
+                    }
+                </MudButton>
+            }
         </CardHeaderActions>
     </MudCardHeader>
 
     <MudCardContent>
+        @if (CreatorProfile == null)
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-4">
+                <MudText>Du hast noch kein Creator-Profil.</MudText>
+                <MudText Typo="Typo.body2">Um Creator zu werden, musst du ein Creator-Abonnement abschließen.</MudText>
+            </MudAlert>
+        }
+        else
+        {
         <MudForm @ref="form" @bind-IsValid="@isValid" @bind-Errors="@errors">
             <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
                 
@@ -52,7 +70,8 @@
                             <MudTextField @bind-Value="editModel.BannerUrl"
                                         Label="Banner URL"
                                         Placeholder="https://..."
-                                        Immediate="true" />
+                                        Immediate="true"
+                                         />
                         </MudItem>
 
                         <MudItem xs="12">
@@ -71,6 +90,28 @@
                                             Immediate="true" />
                             </MudItem>
                         }
+
+                        <MudItem xs="12" md="4">
+                            <MudText Typo="Typo.subtitle2">Follower</MudText>
+                            <MudTextField T="int" Value="@editModel.FollowerCount" ReadOnly="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudText Typo="Typo.subtitle2">Total Raffles</MudText>
+                            <MudTextField T="int" Value="@editModel.TotalRaffles" ReadOnly="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudText Typo="Typo.subtitle2">Tokens verteilt</MudText>
+                            <MudTextField T="int" Value="@editModel.TotalTokensDistributed" ReadOnly="true" />
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudCheckBox T="bool" @bind-Checked="editModel.VerifiedCreator" Label="Verifizierter Creator" />
+                        </MudItem>
+                        @if (editModel.VerifiedCreator)
+                        {
+                            <MudItem xs="12" md="4">
+                                <MudDatePicker @bind-Date="editModel.VerifiedAt" Label="Verifiziert am" />
+                            </MudItem>
+                        }
                     </MudGrid>
                 </MudTabPanel>
 
@@ -84,7 +125,7 @@
                                         Adornment="Adornment.Start"
                                         AdornmentIcon="@Icons.Custom.Brands.YouTube"
                                         AdornmentColor="Color.Error"
-                                        Immediate="true" />
+                                        Immediate="true"/>
                         </MudItem>
 
                         <MudItem xs="12" md="6">
@@ -94,7 +135,8 @@
                                         Adornment="Adornment.Start"
                                         AdornmentIcon="@Icons.Custom.Brands.Twitter"
                                         AdornmentColor="Color.Secondary"
-                                        Immediate="true" />
+                                        Immediate="true"
+                                        />
                         </MudItem>
 
                         <MudItem xs="12" md="6">
@@ -104,7 +146,8 @@
                                         Adornment="Adornment.Start"
                                         AdornmentIcon="@Icons.Custom.Brands.Twitter"
                                         AdornmentColor="Color.Info"
-                                        Immediate="true" />
+                                        Immediate="true"
+                                            />
                         </MudItem>
 
                         <MudItem xs="12" md="6">
@@ -114,7 +157,8 @@
                                         Adornment="Adornment.Start"
                                         AdornmentIcon="@Icons.Custom.Brands.Instagram"
                                         AdornmentColor="Color.Warning"
-                                        Immediate="true" />
+                                        Immediate="true"
+                                         />
                         </MudItem>
 
                         <MudItem xs="12" md="6">
@@ -124,7 +168,8 @@
                                         Adornment="Adornment.Start"
                                         AdornmentIcon="@Icons.Material.Filled.MusicNote"
                                         AdornmentColor="Color.Dark"
-                                        Immediate="true" />
+                                        Immediate="true"
+                                         />
                         </MudItem>
 
                         <MudItem xs="12" md="6">
@@ -134,7 +179,8 @@
                                         Adornment="Adornment.Start"
                                         AdornmentIcon="@Icons.Custom.Brands.Discord"
                                         AdornmentColor="Color.Primary"
-                                        Immediate="true" />
+                                        Immediate="true"
+                                         />
                         </MudItem>
 
                         <MudItem xs="12" md="6">
@@ -144,40 +190,39 @@
                                         Adornment="Adornment.Start"
                                         AdornmentIcon="@Icons.Material.Filled.Favorite"
                                         AdornmentColor="Color.Tertiary"
-                                        Immediate="true" />
+                                        Immediate="true"
+                                         />
                         </MudItem>
                     </MudGrid>
                 </MudTabPanel>
 
                 <!-- Tokens -->
                 <MudTabPanel Text="Tokens" Icon="Icons.Material.Filled.Token">
-                    <CascadingValue Value="editModel">
-                        <CreatorTokensEdit />
-                    </CascadingValue>
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Token Verwaltung</MudText>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OpenTokensDialog">Token verwalten</MudButton>
                 </MudTabPanel>
 
                 <!-- Affiliate Partner -->
                 <MudTabPanel Text="Partner" Icon="Icons.Material.Filled.Handshake">
-                    <CascadingValue Value="editModel">
-                        <AffiliatePartnersEdit />
-                    </CascadingValue>
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Affiliate Partner</MudText>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OpenPartnersDialog">Partner verwalten</MudButton>
                 </MudTabPanel>
 
                 <!-- Placements -->
                 <MudTabPanel Text="Platzierungen" Icon="Icons.Material.Filled.Place">
-                    <CascadingValue Value="editModel">
-                        <CreatorPlacementsEdit />
-                    </CascadingValue>
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Placements</MudText>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="OpenPlacementsDialog">Placements verwalten</MudButton>
                 </MudTabPanel>
 
                 <!-- Raffles -->
                 <MudTabPanel Text="Raffles" Icon="Icons.Material.Filled.Casino">
                     <CascadingValue Value="editModel">
-                        <RafflesEdit />
+                        <RaffleList />
                     </CascadingValue>
                 </MudTabPanel>
             </MudTabs>
         </MudForm>
+        }
     </MudCardContent>
 </MudCard>
 
@@ -191,6 +236,66 @@
     private bool isLoading = false;
     
     private CreatorProfile editModel = new();
+
+    private async Task OpenTokensDialog()
+    {
+        if (string.IsNullOrEmpty(editModel.Id))
+        {
+            Snackbar.Add("Bitte speichere zuerst das Profil, bevor du Tokens bearbeiten kannst.", Severity.Warning);
+            return;
+        }
+
+        var parameters = new DialogParameters { ["Creator"] = editModel };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialogRef = await DialogService.ShowAsync<CreatorTokensEdit>("Token Verwaltung", parameters, options);
+        var result = await dialogRef.Result;
+        if (!result.Canceled)
+        {
+            var updated = await ClientApiService.GetByIdAsync<CreatorProfile>(editModel.Id);
+            if (updated != null)
+                editModel.CreatorTokens = new List<CreatorToken>(updated.CreatorTokens);
+        }
+    }
+
+    private async Task OpenPartnersDialog()
+    {
+        if (string.IsNullOrEmpty(editModel.Id))
+        {
+            Snackbar.Add("Bitte speichere zuerst das Profil, bevor du Partner bearbeiten kannst.", Severity.Warning);
+            return;
+        }
+
+        var parameters = new DialogParameters { ["Creator"] = editModel };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialogRef = await DialogService.ShowAsync<AffiliatePartnersEdit>("Affiliate Partner", parameters, options);
+        var result = await dialogRef.Result;
+        if (!result.Canceled)
+        {
+            var updated = await ClientApiService.GetByIdAsync<CreatorProfile>(editModel.Id);
+            if (updated != null)
+                editModel.AffiliatePartners = new List<AffiliatePartner>(updated.AffiliatePartners);
+        }
+    }
+
+    private async Task OpenPlacementsDialog()
+    {
+        if (string.IsNullOrEmpty(editModel.Id))
+        {
+            Snackbar.Add("Bitte speichere zuerst das Profil, bevor du Placements bearbeiten kannst.", Severity.Warning);
+            return;
+        }
+
+        var parameters = new DialogParameters { ["Creator"] = editModel };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialogRef = await DialogService.ShowAsync<CreatorPlacementsEdit>("Placements", parameters, options);
+        var result = await dialogRef.Result;
+        if (!result.Canceled)
+        {
+            var updated = await ClientApiService.GetByIdAsync<CreatorProfile>(editModel.Id);
+            if (updated != null)
+                editModel.Placements = new List<CreatorPlacement>(updated.Placements);
+        }
+    }
 
     protected override void OnParametersSet()
     {
@@ -217,15 +322,19 @@
                 CollaborationInfo = CreatorProfile.CollaborationInfo,
                 VerifiedCreator = CreatorProfile.VerifiedCreator,
                 VerifiedAt = CreatorProfile.VerifiedAt,
-                CreatorTokens = new List<CreatorToken>(CreatorProfile.CreatorTokens),
-                AffiliatePartners = new List<AffiliatePartner>(CreatorProfile.AffiliatePartners),
-                Placements = new List<CreatorPlacement>(CreatorProfile.Placements)
+                CreatorTokens = CreatorProfile.CreatorTokens != null 
+                    ? new List<CreatorToken>(CreatorProfile.CreatorTokens) 
+                    : new List<CreatorToken>(),
+                AffiliatePartners = CreatorProfile.AffiliatePartners != null 
+                    ? new List<AffiliatePartner>(CreatorProfile.AffiliatePartners) 
+                    : new List<AffiliatePartner>(),
+                Placements = CreatorProfile.Placements != null 
+                    ? new List<CreatorPlacement>(CreatorProfile.Placements) 
+                    : new List<CreatorPlacement>()
             };
         }
-        else
-        {
-            editModel = new CreatorProfile();
-        }
+        // Wenn CreatorProfile null ist, zeigen wir einfach die Info-Meldung an
+        // und initialisieren kein editModel, da der Benutzer nicht bearbeiten kann
     }
 
     private async Task SaveProfile()
@@ -236,25 +345,46 @@
         isLoading = true;
         try
         {
-            CreatorProfile? result;
-            
-            if (string.IsNullOrEmpty(editModel.Id))
+            // Prüfe ob CreatorName verfügbar ist (wenn geändert)
+            if (!string.IsNullOrEmpty(editModel.CreatorName) && 
+                editModel.CreatorName != CreatorProfile?.CreatorName)
             {
-                // Neues Profil erstellen
-                editModel.Id = Guid.NewGuid().ToString();
-                result = await ClientApiService.CreateAsync("api/creatorprofile", editModel);
-                Snackbar.Add("Creator Profil wurde erfolgreich erstellt!", Severity.Success);
+                var isAvailable = await CreatorProfileService.IsCreatorNameAvailableAsync(editModel.CreatorName);
+                if (!isAvailable)
+                {
+                    Snackbar.Add("Dieser Creator-Name ist bereits vergeben!", Severity.Error);
+                    isLoading = false;
+                    return;
+                }
+            }
+
+            // Aktualisiere das Profil über den neuen API-Endpoint
+            var request = new UpdateCreatorProfileRequest
+            {
+                CreatorName = editModel.CreatorName,
+                BannerUrl = editModel.BannerUrl,
+                ImageTemplateUrl = editModel.ImageTemplateUrl,
+                AcceptingCollaborations = editModel.AcceptingCollaborations,
+                CollaborationInfo = editModel.CollaborationInfo,
+                PatreonUrl = editModel.PatreonUrl,
+                YouTubeUrl = editModel.YouTubeUrl,
+                TwitchUrl = editModel.TwitchUrl,
+                TwitterUrl = editModel.TwitterUrl,
+                InstagramUrl = editModel.InstagramUrl,
+                TikTokUrl = editModel.TikTokUrl,
+                DiscordUrl = editModel.DiscordUrl
+            };
+
+            var success = await CreatorProfileService.UpdateCreatorProfileAsync(request);
+
+            if (success)
+            {
+                Snackbar.Add("Creator Profil wurde erfolgreich aktualisiert!", Severity.Success);
+                await OnProfileUpdated.InvokeAsync(editModel);
             }
             else
             {
-                // Bestehendes Profil aktualisieren
-                result = await ClientApiService.UpdateAsync("api/creatorprofile", editModel.Id, editModel);
-                Snackbar.Add("Creator Profil wurde erfolgreich aktualisiert!", Severity.Success);
-            }
-
-            if (result != null)
-            {
-                await OnProfileUpdated.InvokeAsync(result);
+                Snackbar.Add("Fehler beim Speichern des Profils", Severity.Error);
             }
         }
         catch (Exception ex)

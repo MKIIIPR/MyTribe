@@ -1,3 +1,4 @@
+@page "/{CreatorName}/shop"
 @page "/shop/{CreatorId}"
 @using System
 @using System.Collections.Generic
@@ -156,6 +157,7 @@
 
 @code {
     [Parameter] public string? CreatorId { get; set; }
+    [Parameter] public string? CreatorName { get; set; }
 
     private CreatorProfileDto? _creatorProfile;
     private List<ShopProduct> _products = new();
@@ -196,7 +198,8 @@
 
     private async Task LoadCreatorPageAsync()
     {
-        if (string.IsNullOrEmpty(CreatorId))
+        // Prüfe ob CreatorName oder CreatorId vorhanden
+        if (string.IsNullOrEmpty(CreatorId) && string.IsNullOrEmpty(CreatorName))
         {
             _creatorProfile = null;
             _products.Clear();
@@ -208,15 +211,26 @@
         _isLoading = true;
         try
         {
-            var profileTask = CreatorProfileClient.GetCreatorProfileAsync(CreatorId);
-            var productsTask = ProductClient.GetCreatorProductsAsync(CreatorId);
-            var rafflesTask = RaffleClient.GetCreatorRafflesByCreatorIdAsync(CreatorId);
+            // Lade Creator-Profil via Name oder ID
+            if (!string.IsNullOrEmpty(CreatorName))
+            {
+                _creatorProfile = await CreatorProfileClient.GetCreatorByNameAsync(CreatorName);
+            }
+            else if (!string.IsNullOrEmpty(CreatorId))
+            {
+                _creatorProfile = await CreatorProfileClient.GetCreatorProfileAsync(CreatorId);
+            }
 
-            await Task.WhenAll(profileTask, productsTask, rafflesTask);
+            if (_creatorProfile != null)
+            {
+                var productsTask = ProductClient.GetCreatorProductsAsync(_creatorProfile.Id);
+                var rafflesTask = RaffleClient.GetCreatorRafflesByCreatorIdAsync(_creatorProfile.Id);
 
-            _creatorProfile = profileTask.Result;
-            _products = productsTask.Result ?? new();
-            _raffles = rafflesTask.Result ?? new();
+                await Task.WhenAll(productsTask, rafflesTask);
+
+                _products = productsTask.Result ?? new();
+                _raffles = rafflesTask.Result ?? new();
+            }
         }
         catch (Exception ex)
         {
@@ -234,7 +248,19 @@
         Snackbar.Add($"{product.Title} zum Warenkorb hinzugefügt", Severity.Success);
     }
 
-    private void ViewProduct(string id) => Navigation.NavigateTo($"/shop/product/{id}");
+    private void ViewProduct(string id)
+    {
+        // Nutze CreatorName für schöne URL, Fallback auf alte Route
+        var creatorSlug = _creatorProfile?.CreatorName ?? CreatorName;
+        if (!string.IsNullOrEmpty(creatorSlug))
+        {
+            Navigation.NavigateTo($"/{creatorSlug}/shop/{id}");
+        }
+        else
+        {
+            Navigation.NavigateTo($"/shop/product/{id}");
+        }
+    }
 
     private string FormatDateRange(DateTime? start, DateTime? end)
     {

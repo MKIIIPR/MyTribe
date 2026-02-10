@@ -1,0 +1,325 @@
+@page "/testview/creator"
+@using MudBlazor
+@using Tribe.Services.ClientServices.ShopServices
+@using Tribe.Bib.ShopRelated
+@using Tribe.Bib.Models.TribeRelated
+@inject IProductClientService ProductService
+@inject IRaffleClientService RaffleService
+@inject NavigationManager Navigation
+
+<TestView.Creator.CreatorLayout>
+    <!-- Page Header -->
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-6">
+        <MudStack Spacing="0">
+            <MudText Typo="Typo.h4">Willkommen zurück, @(_profile?.DisplayName ?? "Creator")!</MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">Hier ist deine Übersicht für heute.</MudText>
+        </MudStack>
+        <MudStack Row="true" Spacing="2">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add" 
+                       OnClick="@(() => Navigation.NavigateTo("/testview/creator/shop"))">
+                Neues Produkt
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.EmojiEvents"
+                       OnClick="@(() => Navigation.NavigateTo("/testview/creator/raffles"))">
+                Neues Raffle
+            </MudButton>
+        </MudStack>
+    </MudStack>
+
+    <!-- Stats Cards -->
+    <MudGrid Spacing="4" Class="mb-6">
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Follower</MudText>
+                        <MudText Typo="Typo.h4">@(_profile?.FollowerCount ?? 0)</MudText>
+                    </MudStack>
+                    <MudAvatar Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Large">
+                        <MudIcon Icon="@Icons.Material.Filled.People" />
+                    </MudAvatar>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+        
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Produkte</MudText>
+                        <MudText Typo="Typo.h4">@_productCount</MudText>
+                    </MudStack>
+                    <MudAvatar Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large">
+                        <MudIcon Icon="@Icons.Material.Filled.ShoppingBag" />
+                    </MudAvatar>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+        
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Aktive Raffles</MudText>
+                        <MudText Typo="Typo.h4">@_activeRaffleCount</MudText>
+                    </MudStack>
+                    <MudAvatar Color="Color.Warning" Variant="Variant.Outlined" Size="Size.Large">
+                        <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" />
+                    </MudAvatar>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+        
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Tokens verteilt</MudText>
+                        <MudText Typo="Typo.h4">@(_profile?.TotalTokensDistributed ?? 0)</MudText>
+                    </MudStack>
+                    <MudAvatar Color="Color.Info" Variant="Variant.Outlined" Size="Size.Large">
+                        <MudIcon Icon="@Icons.Material.Filled.Token" />
+                    </MudAvatar>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Quick Actions & Recent Activity -->
+    <MudGrid Spacing="4">
+        <!-- Quick Actions -->
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                <MudText Typo="Typo.h6" Class="mb-4">Schnellaktionen</MudText>
+                <MudStack Spacing="2">
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Edit" FullWidth="true"
+                               Href="/testview/creator/profile" Style="justify-content: flex-start;">
+                        Profil bearbeiten
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.AddShoppingCart" FullWidth="true"
+                               Href="/testview/creator/shop" Style="justify-content: flex-start;">
+                        Produkt hinzufügen
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Casino" FullWidth="true"
+                               Href="/testview/creator/raffles" Style="justify-content: flex-start;">
+                        Raffle erstellen
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Token" FullWidth="true"
+                               Href="/testview/creator/tokens" Style="justify-content: flex-start;">
+                        Tokens verwalten
+                    </MudButton>
+                    <MudDivider Class="my-2" />
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.OpenInNew" FullWidth="true"
+                               Href="@GetPublicShopUrl()" Target="_blank" Style="justify-content: flex-start;">
+                        Shop öffnen
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Recent Products -->
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudText Typo="Typo.h6">Neueste Produkte</MudText>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Href="/testview/creator/shop">
+                        Alle anzeigen
+                    </MudButton>
+                </MudStack>
+                
+                @if (_recentProducts.Any())
+                {
+                    <MudStack Spacing="2">
+                        @foreach (var product in _recentProducts.Take(4))
+                        {
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                @if (!string.IsNullOrEmpty(product.ThumbnailUrl))
+                                {
+                                    <MudAvatar Size="Size.Small" Image="@product.ThumbnailUrl" />
+                                }
+                                else
+                                {
+                                    <MudAvatar Size="Size.Small" Color="Color.Secondary">
+                                        <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Small" />
+                                    </MudAvatar>
+                                }
+                                <MudStack Spacing="0" Class="flex-grow-1 overflow-hidden">
+                                    <MudText Typo="Typo.body2" Class="text-truncate">@product.Title</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">€@product.Price.ToString("F2")</MudText>
+                                </MudStack>
+                                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(product.Status)">
+                                    @product.Status
+                                </MudChip>
+                            </MudStack>
+                        }
+                    </MudStack>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Noch keine Produkte vorhanden.</MudText>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <!-- Recent Raffles -->
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="border: 1px solid var(--mud-palette-lines-default); height: 100%;">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudText Typo="Typo.h6">Aktive Raffles</MudText>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" Href="/testview/creator/raffles">
+                        Alle anzeigen
+                    </MudButton>
+                </MudStack>
+                
+                @if (_recentRaffles.Any())
+                {
+                    <MudStack Spacing="2">
+                        @foreach (var raffle in _recentRaffles.Take(4))
+                        {
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudAvatar Size="Size.Small" Color="Color.Warning">
+                                    <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Size="Size.Small" />
+                                </MudAvatar>
+                                <MudStack Spacing="0" Class="flex-grow-1 overflow-hidden">
+                                    <MudText Typo="Typo.body2" Class="text-truncate">@raffle.Title</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @raffle.CurrentEntries / @raffle.MaxEntries Teilnehmer
+                                    </MudText>
+                                </MudStack>
+                                <MudChip T="string" Size="Size.Small" Color="@GetRaffleStatusColor(raffle.Status)">
+                                    @raffle.Status
+                                </MudChip>
+                            </MudStack>
+                        }
+                    </MudStack>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Keine aktiven Raffles.</MudText>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Creator Profile Preview -->
+    <MudPaper Elevation="0" Class="pa-4 rounded-lg mt-6" Style="border: 1px solid var(--mud-palette-lines-default);">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudText Typo="Typo.h6">Dein öffentliches Profil</MudText>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit"
+                       Href="/testview/creator/profile">
+                Bearbeiten
+            </MudButton>
+        </MudStack>
+        
+        @if (_profile != null)
+        {
+            <MudGrid>
+                <MudItem xs="12" md="3">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                        @if (!string.IsNullOrEmpty(_profile.AvatarUrl))
+                        {
+                            <MudAvatar Size="Size.Large" Image="@_profile.AvatarUrl" Style="width: 100px; height: 100px;" />
+                        }
+                        else
+                        {
+                            <MudAvatar Size="Size.Large" Color="Color.Primary" Style="width: 100px; height: 100px;">
+                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" />
+                            </MudAvatar>
+                        }
+                        <MudText Typo="Typo.h6">@_profile.DisplayName</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@@@_profile.CreatorName</MudText>
+                        @if (_profile.VerifiedCreator)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.Verified">
+                                Verifiziert
+                            </MudChip>
+                        }
+                    </MudStack>
+                </MudItem>
+                <MudItem xs="12" md="9">
+                    <MudText Typo="Typo.body1" Class="mb-4">@(_profile.Bio ?? "Keine Bio vorhanden.")</MudText>
+                    <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                        @if (!string.IsNullOrEmpty(_profile.YouTubeUrl))
+                        {
+                            <MudChip T="string" Icon="@Icons.Custom.Brands.YouTube" Color="Color.Error" Size="Size.Small">YouTube</MudChip>
+                        }
+                        @if (!string.IsNullOrEmpty(_profile.TwitchUrl))
+                        {
+                            <MudChip T="string" Color="Color.Secondary" Size="Size.Small">Twitch</MudChip>
+                        }
+                        @if (!string.IsNullOrEmpty(_profile.DiscordUrl))
+                        {
+                            <MudChip T="string" Icon="@Icons.Custom.Brands.Discord" Color="Color.Primary" Size="Size.Small">Discord</MudChip>
+                        }
+                        @if (!string.IsNullOrEmpty(_profile.InstagramUrl))
+                        {
+                            <MudChip T="string" Icon="@Icons.Custom.Brands.Instagram" Color="Color.Warning" Size="Size.Small">Instagram</MudChip>
+                        }
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+        }
+    </MudPaper>
+</TestView.Creator.CreatorLayout>
+
+@code {
+    [CascadingParameter(Name = "CreatorProfile")]
+    private CreatorProfileDto? _profile { get; set; }
+    
+    [CascadingParameter(Name = "ProfileId")]
+    private string? _profileId { get; set; }
+
+    private List<ShopStruckture.ShopProduct> _recentProducts = new();
+    private List<Raffle> _recentRaffles = new();
+    private int _productCount = 0;
+    private int _activeRaffleCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(_profileId))
+            {
+                var products = await ProductService.GetCreatorProductsAsync(_profileId);
+                _recentProducts = products?.OrderByDescending(p => p.CreatedAt).Take(4).ToList() ?? new();
+                _productCount = products?.Count ?? 0;
+
+                var raffles = await RaffleService.GetCreatorRafflesAsync();
+                _recentRaffles = raffles?.Where(r => r.Status == "active").Take(4).ToList() ?? new();
+                _activeRaffleCount = raffles?.Count(r => r.Status == "active") ?? 0;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[CreatorDashboard] Error loading data: {ex.Message}");
+        }
+    }
+
+    private string GetPublicShopUrl()
+    {
+        if (_profile?.CreatorName != null)
+            return $"/{_profile.CreatorName}/shop";
+        return "/";
+    }
+
+    private Color GetStatusColor(string? status) => status?.ToLowerInvariant() switch
+    {
+        "active" => Color.Success,
+        "draft" => Color.Default,
+        "inactive" => Color.Warning,
+        _ => Color.Default
+    };
+
+    private Color GetRaffleStatusColor(string? status) => status?.ToLowerInvariant() switch
+    {
+        "active" => Color.Success,
+        "ended" => Color.Warning,
+        "drawn" => Color.Info,
+        _ => Color.Default
+    };
+}

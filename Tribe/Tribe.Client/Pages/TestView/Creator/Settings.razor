@@ -1,0 +1,239 @@
+@page "/testview/creator/settings"
+@using MudBlazor
+@using Tribe.Services.ClientServices.ShopServices
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<TestView.Creator.CreatorLayout>
+    <!-- Page Header -->
+    <MudStack Spacing="0" Class="mb-6">
+        <MudBreadcrumbs Items="_breadcrumbs" Class="pa-0" />
+        <MudText Typo="Typo.h4">Einstellungen</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+            Verwalte deine Creator-Einstellungen und Abonnement.
+        </MudText>
+    </MudStack>
+
+    <MudGrid Spacing="4">
+        <!-- Linke Spalte: Navigation -->
+        <MudItem xs="12" md="3">
+            <MudPaper Elevation="0" Class="rounded-lg" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudNavMenu Bordered="true" Color="Color.Primary">
+                    <MudNavLink Href="#general" Icon="@Icons.Material.Filled.Settings" Match="NavLinkMatch.All">
+                        Allgemein
+                    </MudNavLink>
+                    <MudNavLink Href="#subscription" Icon="@Icons.Material.Filled.CreditCard" Match="NavLinkMatch.All">
+                        Abonnement
+                    </MudNavLink>
+                    <MudNavLink Href="#notifications" Icon="@Icons.Material.Filled.Notifications" Match="NavLinkMatch.All">
+                        Benachrichtigungen
+                    </MudNavLink>
+                    <MudNavLink Href="#privacy" Icon="@Icons.Material.Filled.Security" Match="NavLinkMatch.All">
+                        Privatsphäre
+                    </MudNavLink>
+                    <MudNavLink Href="#danger" Icon="@Icons.Material.Filled.Warning" Match="NavLinkMatch.All">
+                        Gefahrenzone
+                    </MudNavLink>
+                </MudNavMenu>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Rechte Spalte: Inhalt -->
+        <MudItem xs="12" md="9">
+            <!-- Allgemein -->
+            <MudPaper id="general" Elevation="0" Class="pa-4 rounded-lg mb-4" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" />
+                    Allgemeine Einstellungen
+                </MudText>
+                
+                <MudStack Spacing="3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body1">Shop öffentlich sichtbar</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Wenn deaktiviert, ist dein Shop nur für dich sichtbar.
+                            </MudText>
+                        </MudStack>
+                        <MudSwitch T="bool" @bind-Value="_shopVisible" Color="Color.Primary" />
+                    </MudStack>
+                    
+                    <MudDivider />
+                    
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body1">Kommentare erlauben</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Besucher können Kommentare auf deiner Seite hinterlassen.
+                            </MudText>
+                        </MudStack>
+                        <MudSwitch T="bool" @bind-Value="_commentsEnabled" Color="Color.Primary" />
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+
+            <!-- Abonnement -->
+            <MudPaper id="subscription" Elevation="0" Class="pa-4 rounded-lg mb-4" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.CreditCard" Class="mr-2" />
+                    Abonnement
+                </MudText>
+                
+                <MudAlert Severity="Severity.Success" Class="mb-4" Icon="@Icons.Material.Filled.CheckCircle">
+                    <MudText Typo="Typo.body2">
+                        Dein Creator-Abonnement ist aktiv. Nächste Abrechnung: 01.02.2025
+                    </MudText>
+                </MudAlert>
+                
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <MudPaper Elevation="0" Class="pa-4 rounded-lg" Style="border: 2px solid var(--mud-palette-primary); background: var(--mud-palette-primary-lighten);">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-2">
+                                <MudText Typo="Typo.h6">Creator Pro</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Primary">Aktuell</MudChip>
+                            </MudStack>
+                            <MudText Typo="Typo.h4" Class="mb-2">€19.99<MudText Typo="Typo.caption">/Monat</MudText></MudText>
+                            <MudList T="string" Dense="true">
+                                <MudListItem Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">Unbegrenzte Produkte</MudListItem>
+                                <MudListItem Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">Unbegrenzte Raffles</MudListItem>
+                                <MudListItem Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">Eigene Tokens</MudListItem>
+                                <MudListItem Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">Prioritäts-Support</MudListItem>
+                            </MudList>
+                        </MudPaper>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudStack Spacing="2">
+                            <MudButton Variant="Variant.Outlined" FullWidth="true">
+                                Plan ändern
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" FullWidth="true">
+                                Rechnungen anzeigen
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" FullWidth="true">
+                                Zahlungsmethode ändern
+                            </MudButton>
+                        </MudStack>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+
+            <!-- Benachrichtigungen -->
+            <MudPaper id="notifications" Elevation="0" Class="pa-4 rounded-lg mb-4" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Notifications" Class="mr-2" />
+                    Benachrichtigungen
+                </MudText>
+                
+                <MudStack Spacing="3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body1">E-Mail bei neuen Bestellungen</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Erhalte eine E-Mail, wenn jemand etwas kauft.
+                            </MudText>
+                        </MudStack>
+                        <MudSwitch T="bool" @bind-Value="_notifyOrders" Color="Color.Primary" />
+                    </MudStack>
+                    
+                    <MudDivider />
+                    
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body1">E-Mail bei Raffle-Teilnahmen</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Erhalte eine E-Mail bei neuen Raffle-Teilnahmen.
+                            </MudText>
+                        </MudStack>
+                        <MudSwitch T="bool" @bind-Value="_notifyRaffles" Color="Color.Primary" />
+                    </MudStack>
+                    
+                    <MudDivider />
+                    
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body1">Wöchentlicher Report</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Erhalte einen wöchentlichen Überblick per E-Mail.
+                            </MudText>
+                        </MudStack>
+                        <MudSwitch T="bool" @bind-Value="_weeklyReport" Color="Color.Primary" />
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+
+            <!-- Privatsphäre -->
+            <MudPaper id="privacy" Elevation="0" Class="pa-4 rounded-lg mb-4" Style="border: 1px solid var(--mud-palette-lines-default);">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Security" Class="mr-2" />
+                    Privatsphäre
+                </MudText>
+                
+                <MudStack Spacing="3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body1">Statistiken öffentlich</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Zeige Follower-Anzahl und andere Statistiken öffentlich an.
+                            </MudText>
+                        </MudStack>
+                        <MudSwitch T="bool" @bind-Value="_statsPublic" Color="Color.Primary" />
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+
+            <!-- Gefahrenzone -->
+            <MudPaper id="danger" Elevation="0" Class="pa-4 rounded-lg" Style="border: 1px solid var(--mud-palette-error);">
+                <MudText Typo="Typo.h6" Color="Color.Error" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" />
+                    Gefahrenzone
+                </MudText>
+                
+                <MudStack Spacing="3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body1">Abonnement kündigen</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Dein Shop bleibt bis zum Ende der Laufzeit aktiv.
+                            </MudText>
+                        </MudStack>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small">
+                            Kündigen
+                        </MudButton>
+                    </MudStack>
+                    
+                    <MudDivider />
+                    
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudStack Spacing="0">
+                            <MudText Typo="Typo.body1">Creator-Profil löschen</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Löscht alle Produkte, Raffles und Creator-Daten unwiderruflich.
+                            </MudText>
+                        </MudStack>
+                        <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small">
+                            Profil löschen
+                        </MudButton>
+                    </MudStack>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</TestView.Creator.CreatorLayout>
+
+@code {
+    [CascadingParameter(Name = "CreatorProfile")]
+    private CreatorProfileDto? _profile { get; set; }
+
+    private bool _shopVisible = true;
+    private bool _commentsEnabled = true;
+    private bool _notifyOrders = true;
+    private bool _notifyRaffles = false;
+    private bool _weeklyReport = true;
+    private bool _statsPublic = true;
+
+    private List<BreadcrumbItem> _breadcrumbs = new()
+    {
+        new BreadcrumbItem("Dashboard", "/testview/creator"),
+        new BreadcrumbItem("Einstellungen", null, disabled: true)
+    };
+}

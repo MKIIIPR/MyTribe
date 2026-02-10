@@ -200,16 +200,16 @@
                         <MudText Typo="Typo.h5">Shop</MudText>
                         <MudSpacer />
                         <MudButton Variant="Variant.Text" EndIcon="@Icons.Material.Filled.ArrowForward" 
-                                  Href="@($"/shop/{CreatorId}")">
+                                  Href="@GetShopUrl()">
                             Alle Produkte
                         </MudButton>
                     </MudStack>
-                    
+
                     <MudGrid>
                         @foreach (var product in _products.Take(6))
                         {
                             <MudItem xs="12" sm="6" md="4">
-                                <MudCard Elevation="2" Class="product-card" @onclick="@(() => Navigation.NavigateTo($"/shop/{CreatorId}/product/{product.Id}"))">
+                                <MudCard Elevation="2" Class="product-card" @onclick="@(() => NavigateToProduct(product.Id))">
                                     <MudCardMedia Image="@(product.ThumbnailUrl ?? "https://via.placeholder.com/300x200?text=Produkt")" Height="180" />
                                     <MudCardContent>
                                         <MudStack Spacing="1">
@@ -323,6 +323,20 @@
         await LoadCreatorData();
     }
 
+    // Reservierte URL-Segmente die nicht als CreatorName verwendet werden dürfen
+    private static readonly HashSet<string> ReservedNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "account", "login", "register", "logout", "shop", "cart", "checkout", 
+        "admin", "api", "dashboard", "settings", "profile", "help", "support",
+        "terms", "privacy", "about", "contact", "search", "explore", "discover",
+        "notifications", "messages", "orders", "subscriptions", "billing"
+    };
+
+    private bool IsReservedName(string? name)
+    {
+        return !string.IsNullOrEmpty(name) && ReservedNames.Contains(name);
+    }
+
     private async Task LoadCreatorData()
     {
         _isLoading = true;
@@ -331,6 +345,15 @@
 
         try
         {
+            // Prüfe ob der Name reserviert ist
+            if (IsReservedName(CreatorName))
+            {
+                Console.WriteLine($"[CreatorLandingPage] Reserved name detected: {CreatorName}");
+                _creator = null;
+                _isLoading = false;
+                return;
+            }
+
             Console.WriteLine($"[CreatorLandingPage] Loading creator data - CreatorId: {CreatorId}, CreatorName: {CreatorName}");
 
             // Load creator profile
@@ -354,9 +377,13 @@
             {
                 Console.WriteLine($"[CreatorLandingPage] Creator found: {_creator.DisplayName} (Id: {_creator.Id})");
 
-                // Load products
+                // Load products - filter für aktive Produkte (case-insensitive wegen inkonsistenter Status-Werte)
                 _products = await ProductService.GetCreatorProductsAsync(_creator.Id);
-                _products = _products.Where(p => p.Status == ProductStatus.Active).ToList();
+                _products = _products.Where(p => 
+                    string.Equals(p.Status, ProductStatus.Active, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(p.Status, "Active", StringComparison.OrdinalIgnoreCase)
+                ).ToList();
+                Console.WriteLine($"[CreatorLandingPage] Products loaded: {_products.Count}");
 
                 // Load active raffles
                 var allRaffles = await RaffleService.GetCreatorRafflesAsync();
@@ -388,5 +415,30 @@
     {
         if (raffle.MaxEntries <= 0) return 0;
         return (double)raffle.CurrentEntries / raffle.MaxEntries * 100;
+    }
+
+    private string GetCreatorSlug()
+    {
+        // Bevorzuge CreatorName, dann _creator.CreatorName, Fallback auf CreatorId
+        return CreatorName ?? _creator?.CreatorName ?? CreatorId ?? "";
+    }
+
+    private string GetShopUrl()
+    {
+        var slug = GetCreatorSlug();
+        return string.IsNullOrEmpty(slug) ? "/" : $"/{slug}/shop";
+    }
+
+    private void NavigateToProduct(string productId)
+    {
+        var slug = GetCreatorSlug();
+        if (!string.IsNullOrEmpty(slug))
+        {
+            Navigation.NavigateTo($"/{slug}/shop/{productId}");
+        }
+        else
+        {
+            Navigation.NavigateTo($"/shop/product/{productId}");
+        }
     }
 }
